@@ -269,7 +269,7 @@ export const uuidv4 = (): string => {
   });
 };
 
-export const makeAuthenticatedRequest = <T = unknown>(
+export const makeAuthenticatedRequest = <T = Record<string, unknown>>(
   url: string,
   method: string,
   data: unknown = null,
@@ -287,7 +287,7 @@ export const makeAuthenticatedRequest = <T = unknown>(
   return xhrClient<T>(url, method, headers, data);
 };
 
-export const makePublicRequest = <T = unknown>(
+export const makePublicRequest = <T = Record<string, unknown>>(
   url: string,
   method: string,
   data: unknown = null,

@@ -99,7 +99,10 @@ const Flag = ({ src, alt }: { src: string; alt: string }) => (
 );
 
 /** Map raw API card data → VirtualCard */
-const mapApiCard = (raw: any, userFullName: string): VirtualCard => {
+const mapApiCard = (
+  raw: Record<string, unknown>,
+  userFullName: string,
+): VirtualCard => {
   const currency = raw.currency || raw.currency_code || "USD";
   const network: CardNetwork =
     String(raw.card_type || raw.cardType || raw.network || "Visa").includes(
@@ -138,7 +141,7 @@ const mapApiCard = (raw: any, userFullName: string): VirtualCard => {
 };
 
 /** Map raw API request history → CardRequest */
-const mapApiRequest = (raw: any): CardRequest => {
+const mapApiRequest = (raw: Record<string, unknown>): CardRequest => {
   const currency = raw.currency || raw.currency_code || "USD";
   const network: CardNetwork =
     String(raw.card_type || raw.cardType || raw.network || "").toLowerCase() ===
@@ -218,7 +221,7 @@ const VirtualCardsPage = () => {
   const [selectedCurrency, setSelectedCurrency] = useState<Currency | null>(
     null,
   );
-  const [error, setError] = useState("");
+  const [_error, setError] = useState("");
   const [wallet, setWallet] = useState<any>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const scrollTimer = useRef<NodeJS.Timeout | null>(null);
@@ -334,7 +337,7 @@ const VirtualCardsPage = () => {
 
       if (response?.wallet_balances) {
         const apiCurrencies: Currency[] = response.wallet_balances.map(
-          (b: any) => ({
+          (b: Record<string, unknown>) => ({
             name: b.currency_code,
             code: b.currency_code,
             symbol: b.symbol,
@@ -363,7 +366,7 @@ const VirtualCardsPage = () => {
     } catch (e) {
       console.error("Wallet load error:", e);
     }
-  }, []);
+  }, [router]);
 
   // ── Load virtual cards + request history from API ─────────────────────────
   const loadCards = useCallback(async () => {
@@ -377,7 +380,7 @@ const VirtualCardsPage = () => {
       const cardsResponse =
         await virtualCardService.fetchUserVirtualCardsByUserId(userId);
 
-      let rawCards: any[] = [];
+      let rawCards: Record<string, unknown>[] = [];
       if (Array.isArray(cardsResponse)) {
         rawCards = cardsResponse;
       } else if (cardsResponse?.data && Array.isArray(cardsResponse.data)) {
@@ -408,20 +411,19 @@ const VirtualCardsPage = () => {
       setTimeout(() => setIsPageLoading(false), 2000);
     };
     init();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     if (wallet?.wallet_balances) {
-      const filtered = wallet.wallet_balances
-        .filter(
-          (w: any) => w.currency_code === "USD" || w.currency_code === "NGN",
-        )
-        .map((w: any) => ({
+      const filtered = (wallet.wallet_balances as Record<string, unknown>[])
+        .filter((w) => w.currency_code === "USD" || w.currency_code === "NGN")
+        .map((w) => ({
           code: w.currency_code,
           label: `${w.currency_code} Wallet`,
-          balance: parseFloat(w.balance),
+          balance: parseFloat(String(w.balance ?? 0)),
           symbol: w.symbol,
-          flag: FLAG_MAP[w.currency_code] || FLAG_MAP["USD"],
+          flag: FLAG_MAP[String(w.currency_code)] || FLAG_MAP["USD"],
         }));
       setWallets(filtered);
       if (filtered.length > 0) setSelectedWallet(filtered[0]);
@@ -454,7 +456,7 @@ const VirtualCardsPage = () => {
       year: "numeric",
     });
 
-    const optimisticCard: VirtualCard = {
+    const _optimisticCard: VirtualCard = {
       id: String(Date.now()),
       network: cardNetwork,
       currency: currencyCode,
@@ -467,7 +469,7 @@ const VirtualCardsPage = () => {
       flag: FLAG_MAP[currencyCode] || FLAG_MAP["USD"],
     };
 
-    const optimisticRequest: CardRequest = {
+    const _optimisticRequest: CardRequest = {
       id: `r${Date.now()}`,
       currency: currencyCode,
       network: cardNetwork,
@@ -502,14 +504,15 @@ const VirtualCardsPage = () => {
       setFundAmount("");
       showToast("Card request submitted successfully!", "success");
       await loadCards();
-    } catch (e: any) {
+    } catch (e) {
       console.error("Card creation error:", e);
       const msg =
         typeof e === "string"
           ? e
-          : e?.message ||
-            e?.data?.message ||
-            "Failed to submit card request. Please try again.";
+          : ((e as { message?: string; data?: { message?: string } })
+              ?.message ??
+            (e as { data?: { message?: string } })?.data?.message ??
+            "Failed to submit card request. Please try again.");
       showToast(msg, "warning");
     } finally {
       setIsSubmitting(false);
