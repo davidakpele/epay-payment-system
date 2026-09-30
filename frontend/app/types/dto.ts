@@ -11,7 +11,11 @@ export interface UserWallet {
 }
 
 export interface UserData {
-  hasSeenWelcome?: boolean; 
+  hasSeenWelcome?: boolean;
+  hasSeenMetaMap?: boolean;
+  hasConversations?: boolean;
+  locale?: string;
+  photo?: string;
   token?: string;
   username?: string;
   userId?: string | number;

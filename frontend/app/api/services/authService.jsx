@@ -1,61 +1,60 @@
 // api/services/authService.js
-import { makePublicRequest, makeAuthenticatedRequest } from '../utils.ts';
-import { API_URLS } from '../config.ts';
+import { makePublicRequest, makeAuthenticatedRequest } from "../utils.ts";
+import { API_URLS } from "../config.ts";
 
 export const authService = {
-    login: (credentials) => {
-        return makePublicRequest(API_URLS.AUTH.LOGIN, 'POST', credentials);
-    },
-    
-    register: (userData) => {
-        return makePublicRequest(API_URLS.AUTH.REGISTER, 'POST', userData);
-    },
-    
-    getProfile: () => {
-        return makeAuthenticatedRequest(API_URLS.AUTH.PROFILE, 'GET');
-    },
-    
-    logout: (id) => {
-        return makePublicRequest(API_URLS.AUTH.LOGOUT(id), 'GET');
-    },
-    
-    refreshToken: () => {
-        return makePublicRequest(API_URLS.AUTH.REFRESH_TOKEN, 'POST');
-    },
+  login: (credentials) => {
+    return makePublicRequest(API_URLS.AUTH.LOGIN, "POST", credentials);
+  },
 
-    verifyToken: (token) => {
-        return makePublicRequest(API_URLS.AUTH.VERIFYTOKEN(token), 'GET');
-    },
+  register: (userData) => {
+    return makePublicRequest(API_URLS.AUTH.REGISTER, "POST", userData);
+  },
 
-    resendOtp: (token) => {
-        return makePublicRequest(API_URLS.AUTH.RESENDOTP(token), 'POST');
-    },
+  getProfile: () => {
+    return makeAuthenticatedRequest(API_URLS.AUTH.PROFILE, "GET");
+  },
 
-    verifyOtp: (payload) => {
-        return makePublicRequest(API_URLS.AUTH.VERIFYOTP, 'POST', payload);
-    },
+  logout: (id) => {
+    return makePublicRequest(API_URLS.AUTH.LOGOUT(id), "GET");
+  },
 
-    sendVerifyCode: (identifier, method) => {
-        return makePublicRequest(API_URLS.AUTH.SEND_VERIFY_CODE(identifier, method), 'POST');
-    },
+  refreshToken: () => {
+    return makePublicRequest(API_URLS.AUTH.REFRESH_TOKEN, "POST");
+  },
 
-    resendVerificationCode: (token)=>{
+  verifyToken: (token) => {
+    return makePublicRequest(API_URLS.AUTH.VERIFYTOKEN(token), "GET");
+  },
 
-    },
+  resendOtp: (token) => {
+    return makePublicRequest(API_URLS.AUTH.RESENDOTP(token), "POST");
+  },
 
-    verifyTwoFactorAuth:(token, verificationCode)=>{
+  verifyOtp: (payload) => {
+    return makePublicRequest(API_URLS.AUTH.VERIFYOTP, "POST", payload);
+  },
 
-    },
-    
-    forgotPassword: (payload) => {
-        console.log('Forgot password payload:', payload);
-        // return makePublicRequest(API_URLS.AUTH.VERIFYOTP, 'POST', payload);
-    },
+  sendVerifyCode: (identifier, method) => {
+    return makePublicRequest(
+      API_URLS.AUTH.SEND_VERIFY_CODE(identifier, method),
+      "POST",
+    );
+  },
 
-    forgotUsername: (payload) => {
-        console.log('Forgot username payload:', payload);
-        // return makePublicRequest(API_URLS.AUTH.VERIFYOTP, 'POST', payload);
-    },
+  resendVerificationCode: (_token) => {},
+
+  verifyTwoFactorAuth: (_token, _verificationCode) => {},
+
+  forgotPassword: (payload) => {
+    console.log("Forgot password payload:", payload);
+    // return makePublicRequest(API_URLS.AUTH.VERIFYOTP, 'POST', payload);
+  },
+
+  forgotUsername: (payload) => {
+    console.log("Forgot username payload:", payload);
+    // return makePublicRequest(API_URLS.AUTH.VERIFYOTP, 'POST', payload);
+  },
 };
 
 export default authService;

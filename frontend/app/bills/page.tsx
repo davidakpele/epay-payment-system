@@ -1,69 +1,66 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import Image from 'next/image';
-import DepositModal from '@/components/DepositModal'
-import Footer from '@/components/Footer'
-import Header from '@/components/Header'
-import MobileNav from '@/components/MobileNav'
-import Sidebar from '@/components/Sidebar'
-import "./Bills.css"
-import { filters, services } from '../lib/BillsData';
-import LoadingScreen from '@/components/loader/Loadingscreen';
-import { BILLS_HERO_IMAGE, getBillServiceImage } from '../lib/ImageProvider';
-import SupportChatBot from '@/components/SupportChatBot';
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import Image from "next/image";
+import DepositModal from "@/components/DepositModal";
+import Footer from "@/components/Footer";
+import Header from "@/components/Header";
+import MobileNav from "@/components/MobileNav";
+import Sidebar from "@/components/Sidebar";
+import "./Bills.css";
+import { filters, services } from "../lib/BillsData";
+import LoadingScreen from "@/components/loader/Loadingscreen";
+import { BILLS_HERO_IMAGE, getBillServiceImage } from "../lib/ImageProvider";
+import SupportChatBot from "@/components/SupportChatBot";
 
 const Bills = () => {
-    const [isDepositOpen, setIsDepositOpen] = useState(false);
-    const [theme, setTheme] = useState<'light' | 'dark'>('light');
-    const [selectedFilter, setSelectedFilter] = useState<string>('all');
-    const [searchQuery, setSearchQuery] = useState<string>('');
-    const [isPageLoading, setIsPageLoading] = useState(true);
-    const [isChatOpen, setIsChatOpen] = useState(false);
-    const filteredServices = services.filter(service => {
-      const matchesFilter = selectedFilter === 'all' || service.category === selectedFilter;
-      const matchesSearch = service.name.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchesFilter && matchesSearch;
-    });
-    
-    useEffect(() => {
-      const loadingTimer = setTimeout(() => {
-        setIsPageLoading(false);
-      }, 2000);
-      return () => clearTimeout(loadingTimer);
-    }, []);
+  const [isDepositOpen, setIsDepositOpen] = useState(false);
+  const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [selectedFilter, setSelectedFilter] = useState<string>("all");
+  const [isPageLoading, setIsPageLoading] = useState(true);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const filteredServices = services.filter((service) => {
+    const matchesFilter =
+      selectedFilter === "all" || service.category === selectedFilter;
+    return matchesFilter;
+  });
 
-    const toggleTheme = () => {
-        const newTheme = theme === 'light' ? 'dark' : 'light';
-        setTheme(newTheme);
-        localStorage.setItem('theme', newTheme);
-        document.documentElement.classList.toggle('dark', newTheme === 'dark');
-        document.body.classList.toggle('dark-theme', newTheme === 'dark');
-    };
+  useEffect(() => {
+    const loadingTimer = setTimeout(() => {
+      setIsPageLoading(false);
+    }, 2000);
+    return () => clearTimeout(loadingTimer);
+  }, []);
 
+  const toggleTheme = () => {
+    const newTheme = theme === "light" ? "dark" : "light";
+    setTheme(newTheme);
+    localStorage.setItem("theme", newTheme);
+    document.documentElement.classList.toggle("dark", newTheme === "dark");
+    document.body.classList.toggle("dark-theme", newTheme === "dark");
+  };
 
-    if (isPageLoading) {
-        return <LoadingScreen />;
-    }
+  if (isPageLoading) {
+    return <LoadingScreen />;
+  }
 
   return (
     <div className={`dashboard-container`}>
       <Sidebar />
-      <main className={`main-content ${isDepositOpen ? 'dashboard-blur' : ''}`}>
+      <main className={`main-content ${isDepositOpen ? "dashboard-blur" : ""}`}>
         <Header theme={theme} toggleTheme={toggleTheme} />
         <div className="scrollable-content">
           <div className={`bills-page`}>
             <div className="bills-content">
-
               {/* ---- Hero Banner ---- */}
               <div className="page-header">
                 <div className="page-header-text">
                   <h1 className="page-title">Pay Bills</h1>
                   <p className="page-description">
-                    Make bill payments easier than ever with ePay. With just a few taps,
-                    handle all your bills swiftly and hassle-free. Say goodbye to stress
-                    and hello to convenience!
+                    Make bill payments easier than ever with ePay. With just a
+                    few taps, handle all your bills swiftly and hassle-free. Say
+                    goodbye to stress and hello to convenience!
                   </p>
                 </div>
                 <div className="page-header-illustration">
@@ -72,7 +69,7 @@ const Bills = () => {
                     alt={BILLS_HERO_IMAGE.alt}
                     width={420}
                     height={240}
-                    style={{ objectFit: 'contain', maxHeight: '220px' }}
+                    style={{ objectFit: "contain", maxHeight: "220px" }}
                   />
                 </div>
               </div>
@@ -80,7 +77,7 @@ const Bills = () => {
               {/* ---- Filter Bar ---- */}
               <div className="filter-container">
                 {/* Dropdown for mobile/tablet */}
-                <select 
+                <select
                   className="filter-select"
                   value={selectedFilter}
                   onChange={(e) => setSelectedFilter(e.target.value)}
@@ -98,7 +95,7 @@ const Bills = () => {
                     <button
                       key={filter.id}
                       onClick={() => setSelectedFilter(filter.id)}
-                      className={`filter-button ${selectedFilter === filter.id ? 'active' : ''}`}
+                      className={`filter-button ${selectedFilter === filter.id ? "active" : ""}`}
                     >
                       {filter.label}
                     </button>
@@ -126,7 +123,11 @@ const Bills = () => {
                           alt={img.alt}
                           width={200}
                           height={160}
-                          style={{ objectFit: 'contain', maxHeight: '160px', width: '100%' }}
+                          style={{
+                            objectFit: "contain",
+                            maxHeight: "160px",
+                            width: "100%",
+                          }}
                         />
                       </div>
 
@@ -141,10 +142,9 @@ const Bills = () => {
 
               {filteredServices.length === 0 && (
                 <div className="no-results">
-                  <p>No services found matching "{searchQuery}"</p>
+                  <p>No services found for the selected filter</p>
                 </div>
               )}
-
             </div>
           </div>
           <Footer theme={theme} />
@@ -152,23 +152,26 @@ const Bills = () => {
       </main>
 
       <MobileNav activeTab="none" onPlusClick={() => setIsDepositOpen(true)} />
-      
-      <DepositModal 
-        isOpen={isDepositOpen} 
-        onClose={() => setIsDepositOpen(false)} 
-        theme={theme} 
+
+      <DepositModal
+        isOpen={isDepositOpen}
+        onClose={() => setIsDepositOpen(false)}
+        theme={theme}
       />
       {!isChatOpen && (
-          <button
-            className="chat-fab"
-            onClick={() => setIsChatOpen(true)}
-            aria-label="Open support chat"
-          >
-            <i className="fa-solid fa-comment-dots"></i>
-          </button>
-        )}
+        <button
+          className="chat-fab"
+          onClick={() => setIsChatOpen(true)}
+          aria-label="Open support chat"
+        >
+          <i className="fa-solid fa-comment-dots"></i>
+        </button>
+      )}
 
-        <SupportChatBot isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
+      <SupportChatBot
+        isOpen={isChatOpen}
+        onClose={() => setIsChatOpen(false)}
+      />
     </div>
   );
 };

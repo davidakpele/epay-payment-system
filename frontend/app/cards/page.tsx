@@ -22,6 +22,7 @@ import MobileNav from "@/components/MobileNav";
 import Sidebar from "@/components/Sidebar";
 import LoadingScreen from "@/components/loader/Loadingscreen";
 import Link from "next/link";
+import Image from "next/image";
 import "./VirtualCards.css";
 import { Toast } from "@/app/types/auth";
 import {
@@ -87,7 +88,14 @@ const cardFees: Record<CardNetwork, string> = {
 };
 
 const Flag = ({ src, alt }: { src: string; alt: string }) => (
-  <img src={src} alt={alt} className="flag-img" />
+  <Image
+    src={src}
+    alt={alt}
+    className="flag-img"
+    width={24}
+    height={16}
+    unoptimized
+  />
 );
 
 /** Map raw API card data → VirtualCard */
@@ -1042,10 +1050,13 @@ const VirtualCardsPage = () => {
                                 : `**** **** **** ${hidden ? "••••" : card.last4}`}
                             </div>
                             <div className="vc-card-flag-wrap">
-                              <img
+                              <Image
                                 src={card.flag}
                                 alt={card.currency}
                                 className="vc-card-flag-img"
+                                width={32}
+                                height={22}
+                                unoptimized
                               />
                               {!isLocked && (
                                 <button

@@ -1,5 +1,4 @@
 import xhrClient from "./xhrClient";
-import { defaultHeaders } from "./config";
 import {
   StorageData,
   UserData,
@@ -83,7 +82,7 @@ export const setAuthToken = (
       sessionId,
       userFullName: fullname,
       _jwt_: { jwt: token },
-    } as any,
+    },
   };
 
   const secret_data = JSON.stringify(data);
@@ -154,7 +153,6 @@ const updateStorage = (updater: (user: UserData) => void) => {
 
   if (!existingData.user) existingData.user = {};
   updater(existingData.user);
-
   const updatedData = JSON.stringify(existingData);
   localStorage.setItem("data", updatedData);
   sessionStorage.setItem("data", updatedData);
@@ -271,10 +269,10 @@ export const uuidv4 = (): string => {
   });
 };
 
-export const makeAuthenticatedRequest = <T = any>(
+export const makeAuthenticatedRequest = <T = unknown>(
   url: string,
   method: string,
-  data: any = null,
+  data: unknown = null,
   customHeaders: Record<string, string> = {},
 ) => {
   const headers: Record<string, string> = {
@@ -289,10 +287,10 @@ export const makeAuthenticatedRequest = <T = any>(
   return xhrClient<T>(url, method, headers, data);
 };
 
-export const makePublicRequest = <T = any>(
+export const makePublicRequest = <T = unknown>(
   url: string,
   method: string,
-  data: any = null,
+  data: unknown = null,
   customHeaders: Record<string, string> = {},
 ) => {
   const headers: Record<string, string> = {
@@ -379,16 +377,15 @@ export const calculateProfileCompletion = (): number => {
 
 // Update user profile image in storage
 export const updateProfileImageInStorage = (imageUrl: string) => {
-  let existingData: any = {};
+  let existingData: StorageData = {};
   try {
     const storedData = localStorage.getItem("data");
     if (storedData) existingData = JSON.parse(storedData);
-  } catch (e) {
-    console.error("Failed to parse data", e);
+  } catch {
+    console.error("Failed to parse data");
   }
 
-  if (!existingData.user) existingData.user = {};
-  if (!existingData.user.records) existingData.user.records = [];
+  if (!existingData.user) existingData.user = {} as UserData;
   if (existingData.user) {
     existingData.user.photo = imageUrl;
   }
@@ -401,16 +398,15 @@ export const updateProfileImageInStorage = (imageUrl: string) => {
 };
 
 export const updateHasSeenMetaMap = (status: boolean) => {
-  let existingData: any = {};
+  let existingData: StorageData = {};
   try {
     const storedData = localStorage.getItem("data");
     if (storedData) existingData = JSON.parse(storedData);
-  } catch (e) {
-    console.error("Failed to parse data", e);
+  } catch {
+    console.error("Failed to parse data");
   }
 
-  if (!existingData.user) existingData.user = {};
-  if (!existingData.user.records) existingData.user.records = [];
+  if (!existingData.user) existingData.user = {} as UserData;
   if (existingData.user) {
     existingData.user.hasSeenMetaMap = status;
   }

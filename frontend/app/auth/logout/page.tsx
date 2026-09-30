@@ -10,7 +10,7 @@ export default function Logout() {
   useEffect(() => {
     const doLogout = async () => {
       const userId = getUserId();
-      const [result] = await Promise.allSettled([
+      await Promise.allSettled([
         userId ? authService.logout(userId) : Promise.resolve(),
         new Promise((resolve) => setTimeout(resolve, 1500)), // minimum loader time
       ]);

@@ -11,11 +11,11 @@ interface XhrClientOptions {
   ) => void;
 }
 const authPages = ["/"];
-const xhrClient = <T = any>(
+const xhrClient = <T = unknown>(
   api_url: string,
   method: string,
   headers: Record<string, string> = {},
-  body: any = null,
+  body: unknown = null,
   options: XhrClientOptions = {},
 ): Promise<T> => {
   const {
@@ -45,9 +45,9 @@ const xhrClient = <T = any>(
 
       xhr.onreadystatechange = () => {
         if (xhr.readyState === 4) {
-          if ((xhr.status === 503) && !isAuthPage) {
-            window.location.href = '/auth/logout';
-            reject('Payment required. Redirecting to logout.');
+          if (xhr.status === 503 && !isAuthPage) {
+            window.location.href = "/auth/logout";
+            reject("Payment required. Redirecting to logout.");
             return;
           }
 
@@ -59,7 +59,7 @@ const xhrClient = <T = any>(
             try {
               const response = JSON.parse(xhr.responseText);
               resolve(response as T);
-            } catch (error) {
+            } catch {
               resolve(xhr.responseText as unknown as T);
             }
           } else if (xhr.status === 429 && retryCount < maxRetries) {
@@ -93,7 +93,11 @@ const xhrClient = <T = any>(
             }, delay);
             return;
           } else if (xhr.status > 0) {
-            let errorPayload: any = {
+            let errorPayload: {
+              message: string;
+              status: number;
+              [key: string]: unknown;
+            } = {
               message: "An error occurred",
               status: xhr.status,
             };
@@ -101,7 +105,7 @@ const xhrClient = <T = any>(
             try {
               const errorResponse = JSON.parse(xhr.responseText);
               errorPayload = { ...errorResponse, status: xhr.status };
-            } catch (e) {
+            } catch {
               errorPayload.message = xhr.responseText || `Error: ${xhr.status}`;
             }
             if (xhr.status === 401 && !isAuthPage) {
