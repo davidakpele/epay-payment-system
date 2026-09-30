@@ -424,7 +424,6 @@ const WithdrawModal = ({
       pin.every((digit) => digit !== "") &&
       pin.length === 4
     ) {
-      // eslint-disable-next-line react-hooks/immutability
       const timer = setTimeout(() => handlePinSubmit(), 100);
       return () => clearTimeout(timer);
     }

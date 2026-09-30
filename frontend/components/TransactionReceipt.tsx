@@ -36,7 +36,6 @@ const getSwapDescription = (
 const TransactionReceipt: React.FC<Props> = ({ transaction }) => {
   useEffect(() => {
     // Auto-open receipt when component mounts
-    // eslint-disable-next-line react-hooks/immutability
     openReceiptWindow();
   }, [transaction]);
 

@@ -16,16 +16,12 @@ import {
   CreditCard,
   Repeat,
   Search,
-  User2,
   LucideProps,
   Smartphone,
   Wifi,
   Tv,
   Lightbulb,
-  Hospital,
   Trophy,
-  Plane,
-  ShoppingBag,
   Hand,
 } from "lucide-react";
 import "./Dashboard.css";
@@ -62,10 +58,10 @@ import WelcomeModal from "@/components/WelcomeModal";
 import SupportChatBot from "@/components/SupportChatBot";
 
 const Dashboard = () => {
-  const [loading, setLoading] = useState(false);
+  const [_loading, setLoading] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
 
-  const [error, setError] = useState("");
+  const [_error, setError] = useState("");
   const [wallet, setWallet] = useState<any>(null);
   const [currencies, setCurrencies] = useState<Currency[]>([]);
   const [selectedCurrency, setSelectedCurrency] = useState<Currency | null>(
@@ -230,7 +226,7 @@ const Dashboard = () => {
     refreshBalance();
     fetchHistory();
     // fetchUserProfile is declared below — safe to call via wrapper
-    // eslint-disable-next-line react-hooks/immutability
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     fetchUserProfile();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -372,7 +368,6 @@ const Dashboard = () => {
       const userId = getUserId();
 
       const response = await userService.getById(userId);
-      const API_BASE_URL = "http://localhost:8187";
       setUserProfile(response);
       const userRecord = response.records?.[0] || {};
 

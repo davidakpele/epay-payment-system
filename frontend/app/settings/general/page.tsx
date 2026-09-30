@@ -105,7 +105,6 @@ const Settings = () => {
   }, []);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/immutability
     checkPinStatus();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -137,7 +136,6 @@ const Settings = () => {
   }, []);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/immutability
     fetchUserProfile();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

@@ -135,7 +135,6 @@ const UserProfile = () => {
   const router = useRouter();
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/immutability
     fetchUserProfile();
 
     const firstName = getUserFirstName() || "";
