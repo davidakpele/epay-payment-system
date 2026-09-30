@@ -3,8 +3,6 @@
 
 HELP.md
 target/
-!.mvn/wrapper/maven-wrapper.jar
-!.mvn/wrapper/maven-wrapper.properties
 !**/src/main/**/target/
 !**/src/test/**/target/
 
@@ -19,7 +17,11 @@ target/
 .env
 
 .idea
-.mvn
+# Ignore .mvn directory contents except the wrapper properties needed for CI
+.mvn/**
+!.mvn/wrapper/
+!.mvn/wrapper/maven-wrapper.jar
+!.mvn/wrapper/maven-wrapper.properties
 *.iws
 *.iml
 *.ipr
