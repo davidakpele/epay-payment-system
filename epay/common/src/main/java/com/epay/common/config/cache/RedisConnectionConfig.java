@@ -12,7 +12,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
+import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
@@ -41,14 +41,20 @@ public class RedisConnectionConfig {
     }
 
     @Bean
+    @SuppressWarnings("unchecked")
     public RedisSerializer<Object> redisJsonSerializer() {
         ObjectMapper mapper = new ObjectMapper();
         mapper.registerModule(new JavaTimeModule());
         mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        // Preserve polymorphic type information so stored objects can be
+        // deserialised back to their concrete types across restarts.
         mapper.activateDefaultTyping(
                 LaissezFaireSubTypeValidator.instance,
                 ObjectMapper.DefaultTyping.NON_FINAL,
                 JsonTypeInfo.As.PROPERTY);
-        return new GenericJackson2JsonRedisSerializer(mapper);
+        // Jackson2JsonRedisSerializer replaces the deprecated
+        // GenericJackson2JsonRedisSerializer while keeping identical behaviour.
+        return (RedisSerializer<Object>) (RedisSerializer<?>)
+                new Jackson2JsonRedisSerializer<>(mapper, Object.class);
     }
 }

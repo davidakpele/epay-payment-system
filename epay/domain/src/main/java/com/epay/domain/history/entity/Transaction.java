@@ -152,7 +152,7 @@ public class Transaction {
     private Long version;
 
     public void advanceStatus(TransactionStatus newStatus, String actor, String message) {
-        this.statusTimeline.add(newStatus, actor, message);
+        this.statusTimeline.recordVisit(newStatus, actor, message);
         this.currentStatus = newStatus;
         if (newStatus == TransactionStatus.DELIVERED ||
             newStatus == TransactionStatus.SETTLED ||

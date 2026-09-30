@@ -27,16 +27,13 @@ const eslintConfig = defineConfig([
       "@typescript-eslint/no-unsafe-return": "warn",
       "@typescript-eslint/no-unsafe-argument": "warn",
 
-      // ── React Hooks (eslint-plugin-react-hooks v6 rules) ─────────────────
-      // All these flag valid patterns in this codebase. Warn only so CI
-      // is not blocked; issues remain visible in the editor.
+      // ── React Hooks ───────────────────────────────────────────────────────
+      // Only rules that exist in eslint-plugin-react-hooks (stable API).
+      // The experimental v6 strict rules (set-state-in-effect, immutability,
+      // purity, refs) are NOT registered by the plugin and must not appear here
+      // or ESLint will throw "Definition for rule '…' was not found."
       "react-hooks/exhaustive-deps": "warn",
       "react-hooks/rules-of-hooks": "warn",
-      // v6 strict rules — both possible naming conventions covered:
-      "react-hooks/set-state-in-effect": "warn",
-      "react-hooks/immutability": "warn",
-      "react-hooks/purity": "warn",
-      "react-hooks/refs": "warn",
 
       // ── Next.js ──────────────────────────────────────────────────────────
       "@next/next/no-img-element": "warn",

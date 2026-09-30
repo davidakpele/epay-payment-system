@@ -34,6 +34,7 @@ public class CreateCurrencyRequest {
 
     @Min(value = 0, message = "Decimal places cannot be negative")
     @Max(value = 8, message = "Decimal places cannot exceed 8")
+    @Builder.Default
     private int decimalPlaces = 2;
 
     @DecimalMin(value = "0.0", inclusive = false, message = "Min deposit must be greater than zero")

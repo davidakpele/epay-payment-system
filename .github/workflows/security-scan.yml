@@ -163,18 +163,40 @@ jobs:
           - image_suffix: epay-server
             context: ./epay
             dockerfile: ./epay/Dockerfile
+            needs_maven: true
           - image_suffix: epay-frontend
             context: ./frontend
             dockerfile: ./frontend/Dockerfile
+            needs_maven: false
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
 
+      # ── Backend only: build the fat-jar so Docker COPY can find it ─────
+      # The Dockerfile expects main/target/epay-server.jar (relative to the
+      # ./epay build context). Without this step the Docker build fails with
+      # "lstat /main/target: no such file or directory".
+      - name: Set up JDK 21 (backend image only)
+        if: matrix.needs_maven
+        uses: actions/setup-java@v5
+        with:
+          java-version: "21"
+          distribution: "temurin"
+          cache: maven
+
+      - name: Build backend JAR (backend image only)
+        if: matrix.needs_maven
+        working-directory: epay
+        run: |
+          chmod +x mvnw
+          ./mvnw -B clean package -DskipTests --no-transfer-progress
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
       - name: Build image locally for scanning
+        id: docker-build
         uses: docker/build-push-action@v6
         with:
           context: ${{ matrix.context }}
@@ -186,6 +208,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Run Trivy vulnerability scanner
+        id: trivy-scan
         # v0.36.0 is the latest clean release after the March 2026 supply-chain incident.
         # Tags from v0.29.0 onwards use the v-prefix convention and are marked immutable.
         uses: aquasecurity/trivy-action@v0.36.0
@@ -198,7 +221,10 @@ jobs:
           ignore-unfixed: true
 
       - name: Upload Trivy SARIF to GitHub Security tab
-        if: always()
+        # Only upload when the scan step actually ran and produced a SARIF file.
+        # Using `always()` would attempt the upload even when the Docker build
+        # failed and no .sarif was written, causing "Path does not exist" errors.
+        if: steps.trivy-scan.outcome == 'success' || steps.trivy-scan.outcome == 'failure'
         uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: trivy-${{ matrix.image_suffix }}.sarif
