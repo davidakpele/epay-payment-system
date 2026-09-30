@@ -21,11 +21,10 @@ const eslintConfig = defineConfig([
           caughtErrorsIgnorePattern: "^_",
         },
       ],
-      "@typescript-eslint/no-unsafe-assignment": "warn",
-      "@typescript-eslint/no-unsafe-member-access": "warn",
-      "@typescript-eslint/no-unsafe-call": "warn",
-      "@typescript-eslint/no-unsafe-return": "warn",
-      "@typescript-eslint/no-unsafe-argument": "warn",
+      // The no-unsafe-* rules require type information (parserOptions.project).
+      // eslint-config-next does not configure typed linting, so these rules
+      // throw at parse time rather than producing lint warnings. Removed here;
+      // TypeScript's own compiler catches the equivalent issues at build time.
 
       // ── React Hooks ───────────────────────────────────────────────────────
       // Only rules that exist in eslint-plugin-react-hooks (stable API).

@@ -11,17 +11,17 @@ on:
   workflow_dispatch:
     inputs:
       backend_tag:
-        description: 'Backend image tag to deploy (e.g. main-abc1234)'
+        description: "Backend image tag to deploy (e.g. main-abc1234)"
         required: false
-        default: 'latest'
+        default: "latest"
       frontend_tag:
-        description: 'Frontend image tag to deploy (e.g. main-abc1234)'
+        description: "Frontend image tag to deploy (e.g. main-abc1234)"
         required: false
-        default: 'latest'
+        default: "latest"
       skip_health_check:
-        description: 'Skip post-deploy health check'
+        description: "Skip post-deploy health check"
         required: false
-        default: 'false'
+        default: "false"
         type: boolean
 
 env:
@@ -79,6 +79,22 @@ jobs:
           echo "backend_tag=${BACKEND_TAG}" >> "$GITHUB_OUTPUT"
           echo "frontend_tag=${FRONTEND_TAG}" >> "$GITHUB_OUTPUT"
           echo "Deploying backend:${BACKEND_TAG}  frontend:${FRONTEND_TAG}"
+
+      - name: Verify required secrets are configured
+        run: |
+          MISSING=()
+          [[ -z "${{ secrets.DEPLOY_SSH_KEY }}" ]] && MISSING+=("DEPLOY_SSH_KEY")
+          [[ -z "${{ secrets.DEPLOY_HOST }}"    ]] && MISSING+=("DEPLOY_HOST")
+          [[ -z "${{ secrets.DEPLOY_USER }}"    ]] && MISSING+=("DEPLOY_USER")
+          if [[ ${#MISSING[@]} -gt 0 ]]; then
+            echo "❌ The following repository secrets are not set:"
+            for s in "${MISSING[@]}"; do echo "   • $s"; done
+            echo ""
+            echo "Go to: Settings → Secrets and variables → Actions → New repository secret"
+            echo "and add each missing secret before re-running this workflow."
+            exit 1
+          fi
+          echo "✅ All required secrets are present."
 
       - name: Set up SSH key
         run: |
