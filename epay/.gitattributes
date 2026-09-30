@@ -1,0 +1,15 @@
+/mvnw text eol=lf
+*.cmd text eol=crlf
+
+.env
+.env.*
+!.env.example
+
+application-local.yaml
+application-secrets.yaml
+
+target/
+build/
+.gradle/
+.idea/
+*.iml

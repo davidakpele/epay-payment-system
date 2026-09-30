@@ -1,0 +1,28 @@
+package com.epay.common.interfaces;
+
+public interface IAuthNotificationPublisher {
+
+    void publishVerificationEmail(String email, String content, String link, String username);
+
+    void publishLoginAlert(String email, String fullName, String username,
+                           String loginTime, String ipAddress, String deviceInfo,
+                           String supportPhone, String supportEmail);
+
+    void publishTwoFactorOtp(String email, String otp,
+                              String resetPasswordUrl, String config2faUrl,
+                              String config2faRecoveryUrl);
+
+    void publishNewUserOTPVerification(String email, String otp);
+
+    void publishForgotPasswordOtp(String email, String username, String otp);
+
+    void publishAccountSecurityAlert(String email, String fullName, String username,
+                                     String eventType, String eventTime,
+                                     String ipAddress, String deviceInfo,
+                                     String supportPhone, String supportEmail);
+
+    void publishForgotUsername(String email, String username, String fullName);
+
+  
+    void publishAccountStatement(String email, String username, byte[] pdfBytes, String period);
+}

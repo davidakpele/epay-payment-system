@@ -1,0 +1,433 @@
+{
+  "title": "ePay — Application Overview",
+  "uid": "epay-overview",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-1h", "to": "now" },
+  "tags": ["epay", "java", "spring-boot"],
+  "templating": { "list": [] },
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "App Status",
+      "gridPos": { "x": 0, "y": 0, "w": 4, "h": 4 },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": { "1": { "text": "UP", "color": "green", "index": 0 } }
+            },
+            {
+              "type": "value",
+              "options": { "0": { "text": "DOWN", "color": "red", "index": 1 } }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 1 }
+            ]
+          }
+        }
+      },
+      "datasource": { "type": "prometheus", "uid": "prometheus-uid" },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-uid" },
+          "expr": "up{job=\"epay-server\"}",
+          "refId": "A",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Requests / sec",
+      "gridPos": { "x": 4, "y": 0, "w": 4, "h": 4 },
+      "options": { "colorMode": "value", "graphMode": "area" },
+      "fieldConfig": { "defaults": { "unit": "reqps", "decimals": 2 } },
+      "datasource": { "type": "prometheus", "uid": "prometheus-uid" },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-uid" },
+          "expr": "sum(rate(http_server_requests_seconds_count{job=\"epay-server\"}[1m]))",
+          "refId": "A",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Error Rate (5xx)",
+      "gridPos": { "x": 8, "y": 0, "w": 4, "h": 4 },
+      "options": { "colorMode": "background", "graphMode": "none" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 2,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.01 },
+              { "color": "red", "value": 0.05 }
+            ]
+          }
+        }
+      },
+      "datasource": { "type": "prometheus", "uid": "prometheus-uid" },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-uid" },
+          "expr": "sum(rate(http_server_requests_seconds_count{job=\"epay-server\",status=~\"5..\"}[5m])) / sum(rate(http_server_requests_seconds_count{job=\"epay-server\"}[5m]))",
+          "refId": "A",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "P99 Latency",
+      "gridPos": { "x": 12, "y": 0, "w": 4, "h": 4 },
+      "options": { "colorMode": "value", "graphMode": "none" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 500 },
+              { "color": "red", "value": 2000 }
+            ]
+          }
+        }
+      },
+      "datasource": { "type": "prometheus", "uid": "prometheus-uid" },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-uid" },
+          "expr": "histogram_quantile(0.99, sum(rate(http_server_requests_seconds_bucket{job=\"epay-server\"}[5m])) by (le)) * 1000",
+          "refId": "A",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "JVM Heap Used",
+      "gridPos": { "x": 16, "y": 0, "w": 4, "h": 4 },
+      "options": { "colorMode": "value", "graphMode": "none" },
+      "fieldConfig": { "defaults": { "unit": "bytes" } },
+      "datasource": { "type": "prometheus", "uid": "prometheus-uid" },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-uid" },
+          "expr": "sum(jvm_memory_used_bytes{job=\"epay-server\",area=\"heap\"})",
+          "refId": "A",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "CPU Usage",
+      "gridPos": { "x": 20, "y": 0, "w": 4, "h": 4 },
+      "options": { "colorMode": "value", "graphMode": "none" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.6 },
+              { "color": "red", "value": 0.85 }
+            ]
+          }
+        }
+      },
+      "datasource": { "type": "prometheus", "uid": "prometheus-uid" },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-uid" },
+          "expr": "process_cpu_usage{job=\"epay-server\"}",
+          "refId": "A",
+          "instant": true
+        }
+      ]
+    },
+
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "HTTP Request Rate",
+      "gridPos": { "x": 0, "y": 4, "w": 12, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "reqps" } },
+      "datasource": { "type": "prometheus", "uid": "prometheus-uid" },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-uid" },
+          "expr": "sum(rate(http_server_requests_seconds_count{job=\"epay-server\"}[1m])) by (uri)",
+          "refId": "A",
+          "legendFormat": "{{uri}}"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "HTTP Response Status Distribution",
+      "gridPos": { "x": 12, "y": 4, "w": 12, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "reqps" } },
+      "datasource": { "type": "prometheus", "uid": "prometheus-uid" },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-uid" },
+          "expr": "sum(rate(http_server_requests_seconds_count{job=\"epay-server\"}[1m])) by (status)",
+          "refId": "A",
+          "legendFormat": "HTTP {{status}}"
+        }
+      ]
+    },
+
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "P50 / P95 / P99 Latency",
+      "gridPos": { "x": 0, "y": 12, "w": 12, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "ms" } },
+      "datasource": { "type": "prometheus", "uid": "prometheus-uid" },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-uid" },
+          "expr": "histogram_quantile(0.50, sum(rate(http_server_requests_seconds_bucket{job=\"epay-server\"}[5m])) by (le)) * 1000",
+          "refId": "A",
+          "legendFormat": "p50"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-uid" },
+          "expr": "histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket{job=\"epay-server\"}[5m])) by (le)) * 1000",
+          "refId": "B",
+          "legendFormat": "p95"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-uid" },
+          "expr": "histogram_quantile(0.99, sum(rate(http_server_requests_seconds_bucket{job=\"epay-server\"}[5m])) by (le)) * 1000",
+          "refId": "C",
+          "legendFormat": "p99"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Slow Endpoints (p99 > 500ms)",
+      "gridPos": { "x": 12, "y": 12, "w": 12, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "ms" } },
+      "datasource": { "type": "prometheus", "uid": "prometheus-uid" },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-uid" },
+          "expr": "histogram_quantile(0.99, sum(rate(http_server_requests_seconds_bucket{job=\"epay-server\"}[5m])) by (le, uri)) * 1000 > 500",
+          "refId": "A",
+          "legendFormat": "{{uri}}"
+        }
+      ]
+    },
+
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "JVM Heap Memory",
+      "gridPos": { "x": 0, "y": 20, "w": 12, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "bytes" } },
+      "datasource": { "type": "prometheus", "uid": "prometheus-uid" },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-uid" },
+          "expr": "jvm_memory_used_bytes{job=\"epay-server\",area=\"heap\"}",
+          "refId": "A",
+          "legendFormat": "Used — {{id}}"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-uid" },
+          "expr": "jvm_memory_max_bytes{job=\"epay-server\",area=\"heap\"}",
+          "refId": "B",
+          "legendFormat": "Max — {{id}}"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "JVM Non-Heap Memory",
+      "gridPos": { "x": 12, "y": 20, "w": 12, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "bytes" } },
+      "datasource": { "type": "prometheus", "uid": "prometheus-uid" },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-uid" },
+          "expr": "jvm_memory_used_bytes{job=\"epay-server\",area=\"nonheap\"}",
+          "refId": "A",
+          "legendFormat": "Non-Heap — {{id}}"
+        }
+      ]
+    },
+
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "GC Pause Time",
+      "gridPos": { "x": 0, "y": 28, "w": 12, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "datasource": { "type": "prometheus", "uid": "prometheus-uid" },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-uid" },
+          "expr": "rate(jvm_gc_pause_seconds_sum{job=\"epay-server\"}[5m])",
+          "refId": "A",
+          "legendFormat": "{{gc}} [{{cause}}]"
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "type": "timeseries",
+      "title": "JVM Threads",
+      "gridPos": { "x": 12, "y": 28, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-uid" },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-uid" },
+          "expr": "jvm_threads_live_threads{job=\"epay-server\"}",
+          "refId": "A",
+          "legendFormat": "Live"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-uid" },
+          "expr": "jvm_threads_daemon_threads{job=\"epay-server\"}",
+          "refId": "B",
+          "legendFormat": "Daemon"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-uid" },
+          "expr": "jvm_threads_peak_threads{job=\"epay-server\"}",
+          "refId": "C",
+          "legendFormat": "Peak"
+        }
+      ]
+    },
+
+    {
+      "id": 15,
+      "type": "timeseries",
+      "title": "HikariCP DB Connection Pool",
+      "gridPos": { "x": 0, "y": 36, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-uid" },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-uid" },
+          "expr": "hikaricp_connections_active{job=\"epay-server\"}",
+          "refId": "A",
+          "legendFormat": "Active"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-uid" },
+          "expr": "hikaricp_connections_idle{job=\"epay-server\"}",
+          "refId": "B",
+          "legendFormat": "Idle"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-uid" },
+          "expr": "hikaricp_connections_pending{job=\"epay-server\"}",
+          "refId": "C",
+          "legendFormat": "Pending"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-uid" },
+          "expr": "hikaricp_connections_max{job=\"epay-server\"}",
+          "refId": "D",
+          "legendFormat": "Max"
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "type": "timeseries",
+      "title": "CPU & System Load",
+      "gridPos": { "x": 12, "y": 36, "w": 12, "h": 8 },
+      "fieldConfig": {
+        "defaults": { "unit": "percentunit", "min": 0, "max": 1 }
+      },
+      "datasource": { "type": "prometheus", "uid": "prometheus-uid" },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-uid" },
+          "expr": "process_cpu_usage{job=\"epay-server\"}",
+          "refId": "A",
+          "legendFormat": "Process CPU"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-uid" },
+          "expr": "system_cpu_usage{job=\"epay-server\"}",
+          "refId": "B",
+          "legendFormat": "System CPU"
+        }
+      ]
+    },
+
+    {
+      "id": 17,
+      "type": "timeseries",
+      "title": "Active HTTP Threads (Tomcat)",
+      "gridPos": { "x": 0, "y": 44, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-uid" },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-uid" },
+          "expr": "tomcat_threads_busy_threads{job=\"epay-server\"}",
+          "refId": "A",
+          "legendFormat": "Busy"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-uid" },
+          "expr": "tomcat_threads_current_threads{job=\"epay-server\"}",
+          "refId": "B",
+          "legendFormat": "Current"
+        }
+      ]
+    },
+    {
+      "id": 18,
+      "type": "timeseries",
+      "title": "Open File Descriptors",
+      "gridPos": { "x": 12, "y": 44, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-uid" },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-uid" },
+          "expr": "process_open_fds{job=\"epay-server\"}",
+          "refId": "A",
+          "legendFormat": "Open FDs"
+        }
+      ]
+    }
+  ]
+}
