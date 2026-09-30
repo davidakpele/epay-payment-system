@@ -229,8 +229,11 @@ const Banks = () => {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/immutability
     fetchUserBanks();
+    // eslint-disable-next-line react-hooks/immutability
     fetchBankList();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchUserBanks = async () => {

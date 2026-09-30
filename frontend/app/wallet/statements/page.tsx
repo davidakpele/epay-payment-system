@@ -669,7 +669,7 @@ This is an official receipt for your records.
   };
 
   const getDownloadButtonClass = () => {
-    let baseClass =
+    const baseClass =
       "flex-1 py-2 text-xs rounded-lg font-medium transition flex items-center justify-center gap-2";
 
     if (isDownloading) return baseClass + " bg-blue-600 text-white";
@@ -683,7 +683,7 @@ This is an official receipt for your records.
   };
 
   const getReportButtonClass = () => {
-    let baseClass =
+    const baseClass =
       "flex-1 py-2 text-xs rounded-lg font-medium transition flex items-center justify-center gap-2";
 
     if (isReporting) return baseClass + " bg-yellow-600 text-white";

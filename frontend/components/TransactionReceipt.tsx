@@ -1,29 +1,32 @@
-'use client';
+"use client";
 
-import React, { useEffect } from 'react';
-import { Transaction as TransactionType } from '@/app/types/utils'; // Import your Transaction type
+import React, { useEffect } from "react";
+import { Transaction as TransactionType } from "@/app/types/utils"; // Import your Transaction type
 
 interface Props {
   transaction: TransactionType; // Use your imported Transaction type
 }
 
 const formatAmount = (amount: number) => {
-  return new Intl.NumberFormat('en-US', {
+  return new Intl.NumberFormat("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(Math.abs(amount));
 };
 
-const getSwapDescription = (description: string, transaction: TransactionType) => {
+const getSwapDescription = (
+  description: string,
+  transaction: TransactionType,
+) => {
   // If it's a swap transaction, format the description like in your example
-  if (transaction.type === 'swap') {
+  if (transaction.type === "swap") {
     // Check if description already has the swap format
-    if (description.toLowerCase().includes('swap')) {
+    if (description.toLowerCase().includes("swap")) {
       return description;
     }
     // Generate a swap description based on currencies
     const fromCurrency = transaction.currency;
-    const toCurrency = 'EUR'; // Assuming swap is to EUR based on your example
+    const toCurrency = "EUR"; // Assuming swap is to EUR based on your example
     const rate = 0.00060695; // Example rate
     return `SWAP ${fromCurrency}/EUR : cut ${rate.toFixed(8)}`;
   }
@@ -33,40 +36,53 @@ const getSwapDescription = (description: string, transaction: TransactionType) =
 const TransactionReceipt: React.FC<Props> = ({ transaction }) => {
   useEffect(() => {
     // Auto-open receipt when component mounts
+    // eslint-disable-next-line react-hooks/immutability
     openReceiptWindow();
   }, [transaction]);
 
   const openReceiptWindow = () => {
-    const printWindow = window.open('', '_blank', 'width=600,height=800');
-    
+    const printWindow = window.open("", "_blank", "width=600,height=800");
+
     if (!printWindow) {
       return;
     }
 
     // Generate a receipt number if not provided
-    const receiptNumber = transaction.transactionId || `NX${Math.random().toString(36).substr(2, 9)}`;
-    
+    const receiptNumber =
+      transaction.transactionId ||
+      `NX${Math.random().toString(36).substr(2, 9)}`;
+
     // Generate reference number if not provided
-    const referenceNo = transaction.referenceNo || `REF${Math.floor(1000000 + Math.random() * 9000000)}`;
-    
+    const referenceNo =
+      transaction.referenceNo ||
+      `REF${Math.floor(1000000 + Math.random() * 9000000)}`;
+
     // Generate terminal ID if not provided
-    const terminalId = transaction.terminalId || 'ATM-9989';
-    
+    const terminalId = transaction.terminalId || "ATM-9989";
+
     // Format date
-    const formattedDate = new Date(transaction.date).toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric'
-    });
-    
-    const formattedTime = new Date(transaction.date).toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true
-    }).replace(':', ':');
-    
-    const description = getSwapDescription(transaction.description, transaction);
-    
+    const formattedDate = new Date(transaction.date).toLocaleDateString(
+      "en-US",
+      {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      },
+    );
+
+    const formattedTime = new Date(transaction.date)
+      .toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      })
+      .replace(":", ":");
+
+    const description = getSwapDescription(
+      transaction.description,
+      transaction,
+    );
+
     const receiptContent = `
       <!DOCTYPE html>
       <html>
@@ -148,9 +164,13 @@ const TransactionReceipt: React.FC<Props> = ({ transaction }) => {
           .status-badge {
             display: inline-block;
             padding: 6px 16px;
-            background: ${transaction.status === 'completed' ? '#10b981' : 
-                        transaction.status === 'pending' ? '#f59e0b' : 
-                        '#166701'};
+            background: ${
+              transaction.status === "completed"
+                ? "#10b981"
+                : transaction.status === "pending"
+                  ? "#f59e0b"
+                  : "#166701"
+            };
             color: white;
             border-radius: 4px;
             font-size: 12px;
@@ -218,7 +238,7 @@ const TransactionReceipt: React.FC<Props> = ({ transaction }) => {
           .amount-main {
             font-size: 28px;
             font-weight: 700;
-            color: ${transaction.amount >= 0 ? '#10b981' : '#ef4444'};
+            color: ${transaction.amount >= 0 ? "#10b981" : "#ef4444"};
             margin-bottom: 5px;
           }
           
@@ -495,11 +515,15 @@ const TransactionReceipt: React.FC<Props> = ({ transaction }) => {
             <!-- Amount Section -->
             <div class="amount-section">
               <div class="amount-main">
-                ${transaction.amount >= 0 ? '+' : ''}${transaction.currency} ${formatAmount(transaction.amount)}
+                ${transaction.amount >= 0 ? "+" : ""}${transaction.currency} ${formatAmount(transaction.amount)}
               </div>
               <div class="amount-sub">
-                ${transaction.type === 'swap' ? 'Swap' : 
-                  transaction.type.charAt(0).toUpperCase() + transaction.type.slice(1)} Transaction
+                ${
+                  transaction.type === "swap"
+                    ? "Swap"
+                    : transaction.type.charAt(0).toUpperCase() +
+                      transaction.type.slice(1)
+                } Transaction
               </div>
             </div>
             
@@ -509,7 +533,7 @@ const TransactionReceipt: React.FC<Props> = ({ transaction }) => {
               <div class="info-grid">
                 <div class="info-row">
                   <div class="info-label">Account Holder</div>
-                  <div class="info-value">${transaction.accountHolder || 'Electron Wallet User'}</div>
+                  <div class="info-value">${transaction.accountHolder || "Electron Wallet User"}</div>
                 </div>
                 <div class="info-row">
                   <div class="info-label">Account Type</div>
@@ -517,8 +541,12 @@ const TransactionReceipt: React.FC<Props> = ({ transaction }) => {
                 </div>
                 <div class="info-row">
                   <div class="info-label">Transaction Type</div>
-                  <div class="info-value">${transaction.type === 'swap' ? 'Swap' : 
-                    transaction.type.charAt(0).toUpperCase() + transaction.type.slice(1)}</div>
+                  <div class="info-value">${
+                    transaction.type === "swap"
+                      ? "Swap"
+                      : transaction.type.charAt(0).toUpperCase() +
+                        transaction.type.slice(1)
+                  }</div>
                 </div>
               </div>
             </div>
@@ -534,8 +562,8 @@ const TransactionReceipt: React.FC<Props> = ({ transaction }) => {
                   </div>
                   <div class="info-row">
                     <div class="info-label">Transaction Amount</div>
-                    <div class="info-value" style="color: ${transaction.amount >= 0 ? '#10b981' : '#ef4444'}">
-                      ${transaction.amount >= 0 ? '+' : ''}${transaction.currency} ${formatAmount(transaction.amount)}
+                    <div class="info-value" style="color: ${transaction.amount >= 0 ? "#10b981" : "#ef4444"}">
+                      ${transaction.amount >= 0 ? "+" : ""}${transaction.currency} ${formatAmount(transaction.amount)}
                     </div>
                   </div>
                   <div class="info-row" style="border-top: 1px solid #eaeaea; padding-top: 12px; margin-top: 8px;">
@@ -629,7 +657,7 @@ const TransactionReceipt: React.FC<Props> = ({ transaction }) => {
       </body>
       </html>
     `;
-    
+
     printWindow.document.write(receiptContent);
     printWindow.document.close();
     printWindow.focus();

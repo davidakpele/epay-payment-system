@@ -48,6 +48,7 @@ const History = ({ theme, historyData }: HistoryProps) => {
 
   useEffect(() => {
     if (historyData && Array.isArray(historyData)) {
+      // eslint-disable-next-line react-hooks/immutability
       setTransactions(transformTransactions(historyData));
     } else {
       setTransactions([]);

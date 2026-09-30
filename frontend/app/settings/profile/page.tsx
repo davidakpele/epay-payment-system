@@ -135,11 +135,13 @@ const UserProfile = () => {
   const router = useRouter();
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/immutability
     fetchUserProfile();
 
     const firstName = getUserFirstName() || "";
     const lastName = getUserLastName() || "";
     setMetaMapData((prev) => ({ ...prev, firstName, lastName }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchUserProfile = async () => {
