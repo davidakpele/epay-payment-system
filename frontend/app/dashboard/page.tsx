@@ -396,7 +396,42 @@ const Dashboard = () => {
     setActiveDot(page);
   };
 
-  const fetchUserSettings = async () => {  const toggleTheme = () => {
+  const fetchUserSettings = async () => {
+    try {
+      const userId = getUserId();
+      const response = await configService.getUserSettings(userId);
+
+      if (response?.status === "success" && response?.data) {
+        const settingsData = response.data;
+        setSettings((prev) => ({
+          ...prev,
+          security: {
+            ...prev.security,
+            biometricEnabled: settingsData.isBiometric || false,
+            sessionTimeout: parseInt(settingsData.sessionTimeOut) || 30,
+          },
+          notifications: {
+            email: settingsData.isEmailAlert || false,
+            push: prev.notifications.push,
+            sms: settingsData.isReceiveSmsMessage || false,
+            transactionAlerts: settingsData.isTransactionAlert || false,
+            loginAlerts: settingsData.isLoginAlert || false,
+            marketingEmails: settingsData.isReceiveMarketingNews || false,
+          },
+          preferences: {
+            ...prev.preferences,
+            language: settingsData.preferredLanguage || "English",
+            timezone: settingsData.timeZone || "Africa/Lagos",
+          },
+        }));
+      }
+    } catch (error) {
+      console.error("Error fetching user settings:", error);
+      showToast("Error fetching user settings");
+    }
+  };
+
+  const toggleTheme = () => {
     const newTheme = theme === "light" ? "dark" : "light";
     setTheme(newTheme);
     localStorage.setItem("theme", newTheme);

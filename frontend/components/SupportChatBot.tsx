@@ -202,19 +202,25 @@ const SupportChatBot: React.FC<SupportChatBotProps> = ({ isOpen, onClose }) => {
   const inputRef = useRef<HTMLInputElement>(null);
   const sessionIdRef = useRef<string>(uuidv4());
   const busyRef = useRef(false); // prevents concurrent wizard steps
+  const [isBusy, setIsBusy] = useState(false); // render-safe mirror of busyRef
 
   /* ── Deposit wizard — stored in a ref so closures always see latest value ── */
   const wizardRef = useRef<DepositWizard>({ ...EMPTY_WIZARD });
-  // Mirror in state purely for render (input placeholder)
+  // Mirror in state purely for render (input placeholder + currency)
   const [wizardStep, setWizardStep] = useState<DepositStep>(null);
+  const [wizardCurrency, setWizardCurrency] = useState<string>(
+    EMPTY_WIZARD.currency,
+  );
 
   const setWizard = (patch: Partial<DepositWizard>) => {
     wizardRef.current = { ...wizardRef.current, ...patch };
     setWizardStep(wizardRef.current.step);
+    setWizardCurrency(wizardRef.current.currency);
   };
   const resetWizard = () => {
     wizardRef.current = { ...EMPTY_WIZARD };
     setWizardStep(null);
+    setWizardCurrency(EMPTY_WIZARD.currency);
   };
 
   /* ── Init ── */
@@ -460,7 +466,7 @@ const SupportChatBot: React.FC<SupportChatBotProps> = ({ isOpen, onClose }) => {
     async (value: string, label: string) => {
       if (busyRef.current) return;
       busyRef.current = true;
-
+      setIsBusy(true);
       try {
         const currentStep = wizardRef.current.step;
 
@@ -482,6 +488,7 @@ const SupportChatBot: React.FC<SupportChatBotProps> = ({ isOpen, onClose }) => {
         }
       } finally {
         busyRef.current = false;
+        setIsBusy(false);
       }
     },
     [stepWalletSelected, stepConfirm, stepCancel],
@@ -493,6 +500,7 @@ const SupportChatBot: React.FC<SupportChatBotProps> = ({ isOpen, onClose }) => {
     if (!text || isTyping || busyRef.current) return;
 
     busyRef.current = true;
+    setIsBusy(true);
     setInput("");
     pushUserMsg(text);
 
@@ -538,6 +546,7 @@ const SupportChatBot: React.FC<SupportChatBotProps> = ({ isOpen, onClose }) => {
       }
     } finally {
       busyRef.current = false;
+      setIsBusy(false);
     }
   }, [
     input,
@@ -552,6 +561,7 @@ const SupportChatBot: React.FC<SupportChatBotProps> = ({ isOpen, onClose }) => {
     async (q: string) => {
       if (isTyping || busyRef.current) return;
       busyRef.current = true;
+      setIsBusy(true);
       pushUserMsg(q);
       try {
         if (isBalanceIntent(q)) {
@@ -584,6 +594,7 @@ const SupportChatBot: React.FC<SupportChatBotProps> = ({ isOpen, onClose }) => {
         }
       } finally {
         busyRef.current = false;
+        setIsBusy(false);
       }
     },
     [isTyping, handleBalanceCheck, startDepositWizard],
@@ -600,6 +611,7 @@ const SupportChatBot: React.FC<SupportChatBotProps> = ({ isOpen, onClose }) => {
     sessionIdRef.current = uuidv4();
     resetWizard();
     busyRef.current = false;
+    setIsBusy(false);
     setMessages([
       {
         id: Date.now(),
@@ -807,7 +819,7 @@ const SupportChatBot: React.FC<SupportChatBotProps> = ({ isOpen, onClose }) => {
                   key={o.value}
                   className="scb-option-btn"
                   onClick={() => handleOptionClick(o.value, o.label)}
-                  disabled={isTyping || busyRef.current}
+                  disabled={isTyping || isBusy}
                 >
                   {o.label}
                 </button>
@@ -890,20 +902,20 @@ const SupportChatBot: React.FC<SupportChatBotProps> = ({ isOpen, onClose }) => {
           type={wizardStep === "ask_amount" ? "number" : "text"}
           placeholder={
             wizardStep === "ask_amount"
-              ? `Enter amount in ${wizardRef.current.currency} (e.g. 5000)`
+              ? `Enter amount in ${wizardCurrency} (e.g. 5000)`
               : "Type your message..."
           }
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          disabled={isTyping || busyRef.current}
+          disabled={isTyping || isBusy}
           min={wizardStep === "ask_amount" ? 100 : undefined}
           step={wizardStep === "ask_amount" ? "any" : undefined}
         />
         <button
           className={`scb-send-btn ${!input.trim() || isTyping ? "scb-send-disabled" : ""}`}
           onClick={sendMessage}
-          disabled={!input.trim() || isTyping || busyRef.current}
+          disabled={!input.trim() || isTyping || isBusy}
         >
           <svg
             width="18"

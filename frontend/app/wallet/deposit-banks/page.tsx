@@ -384,7 +384,7 @@ const Banks = () => {
         setShowSuccessModal(true);
 
         const newBankAccount: BankAccount = {
-          id: result.data?.id || Date.now().toString(),
+          id: result.data?.id || crypto.randomUUID(),
           bankName: newBank.bankName,
           accountNumber: newBank.accountNumber,
           accountName: newBank.accountName,

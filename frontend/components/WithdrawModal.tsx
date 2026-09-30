@@ -180,6 +180,8 @@ const WithdrawModal = ({
   const [isVerifyingAccount, setIsVerifyingAccount] = useState(false);
   const idempotencyKeyRef = useRef<string | null>(null);
   const [pendingTransaction, setPendingTransaction] = useState(false);
+  // render-safe mirror of pendingTransaction && idempotencyKeyRef.current !== null
+  const [hasPending, setHasPending] = useState(false);
   const [bankOptions, setBankOptions] = useState<any[]>([]);
   const [wallets, setWallets] = useState<WalletType[]>([]);
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -222,6 +224,7 @@ const WithdrawModal = ({
   const clearIdempotencyKey = () => {
     idempotencyKeyRef.current = null;
     setPendingTransaction(false);
+    setHasPending(false);
   };
 
   const hasPendingTransaction = () => {
@@ -232,6 +235,7 @@ const WithdrawModal = ({
     clearIdempotencyKey();
     generateIdempotencyKey();
     setPendingTransaction(false);
+    setHasPending(false);
   };
 
   const fetchBankList = async () => {
@@ -392,6 +396,7 @@ const WithdrawModal = ({
     if (isOpen) {
       generateIdempotencyKey();
       setPendingTransaction(false);
+      setHasPending(false);
 
       const walletData = getWalletList();
       if (walletData && Array.isArray(walletData)) {
@@ -606,6 +611,7 @@ const WithdrawModal = ({
 
     setIsSubmittingPin(true);
     setPendingTransaction(true);
+    setHasPending(true);
     setIsProcessing(true);
 
     try {
@@ -616,6 +622,7 @@ const WithdrawModal = ({
       if (!bigDecimalString || parseFloat(bigDecimalString) <= 0) {
         setErrorMessage("Invalid amount");
         setPendingTransaction(false);
+        setHasPending(false);
         setIsProcessing(false);
         setIsSubmittingPin(false);
         return;
@@ -624,6 +631,7 @@ const WithdrawModal = ({
       if (!selectedWallet) {
         setErrorMessage("Wallet not found");
         setPendingTransaction(false);
+        setHasPending(false);
         setIsProcessing(false);
         setIsSubmittingPin(false);
         return;
@@ -733,6 +741,7 @@ const WithdrawModal = ({
           setShowFailModal(true);
           setShowPinModal(false);
           setPendingTransaction(true);
+          setHasPending(true);
           throw new Error(errorMessage);
         }
       } else {
@@ -742,6 +751,7 @@ const WithdrawModal = ({
         setShowFailModal(true);
         setShowPinModal(false);
         setPendingTransaction(true);
+        setHasPending(true);
         throw new Error(errorMessage);
       }
     } catch (error: any) {
@@ -757,6 +767,7 @@ const WithdrawModal = ({
       }
       generateIdempotencyKey();
       setPendingTransaction(false);
+      setHasPending(false);
 
       if (
         errorMessage.toLowerCase().includes("user") &&
@@ -1138,10 +1149,10 @@ const WithdrawModal = ({
                     isProcessing ||
                     !selectedWallet ||
                     isVerifyingAccount ||
-                    hasPendingTransaction()
+                    hasPending
                   }
                 >
-                  {isProcessing || hasPendingTransaction() ? (
+                  {isProcessing || hasPending ? (
                     <>
                       <div className="spinner" />
                       <span>Processing...</span>
