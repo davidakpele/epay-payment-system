@@ -37,8 +37,6 @@ const eslintConfig = defineConfig([
       "react-hooks/immutability": "warn",
       "react-hooks/purity": "warn",
       "react-hooks/refs": "warn",
-      // React compiler rules (Next.js 16 ships babel-plugin-react-compiler)
-      "react-compiler/react-compiler": "warn",
 
       // ── Next.js ──────────────────────────────────────────────────────────
       "@next/next/no-img-element": "warn",
