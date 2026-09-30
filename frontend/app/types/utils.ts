@@ -109,7 +109,7 @@ export interface Transaction {
   previousBalance?: number;
   availableBalance?: number;
   icon: React.ReactElement;
-  originalData: any;
+  originalData: Record<string, unknown>;
 }
 
 export interface StatusInfo {

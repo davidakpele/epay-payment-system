@@ -1,11 +1,11 @@
-type EventCallback = (...args: any[]) => void;
+type EventCallback = (...args: unknown[]) => void;
 
 class EventEmitter {
   private events: { [key: string]: EventCallback[] } = {};
 
   // Static properties for event names
-  static readonly refreshBalance = 'refreshBalance';
-  static readonly refreshNotifications = 'refreshNotifications';
+  static readonly refreshBalance = "refreshBalance";
+  static readonly refreshNotifications = "refreshNotifications";
 
   on(event: string, callback: EventCallback) {
     if (!this.events[event]) {
@@ -16,12 +16,12 @@ class EventEmitter {
 
   off(event: string, callback: EventCallback) {
     if (!this.events[event]) return;
-    this.events[event] = this.events[event].filter(cb => cb !== callback);
+    this.events[event] = this.events[event].filter((cb) => cb !== callback);
   }
 
-  emit(event: string, ...args: any[]) {
+  emit(event: string, ...args: unknown[]) {
     if (!this.events[event]) return;
-    this.events[event].forEach(callback => callback(...args));
+    this.events[event].forEach((callback) => callback(...args));
   }
 }
 

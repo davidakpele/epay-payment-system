@@ -4,10 +4,10 @@ export interface LoginFormErrors {
 }
 
 export interface RegisterFormErrors {
-    firstname?: string;
-    lastname?: string;
-    email?: string;
-    password?: string;
+  firstname?: string;
+  lastname?: string;
+  email?: string;
+  password?: string;
 }
 
 export interface ResetPasswordFormErrors {
@@ -39,7 +39,7 @@ export interface SendStatementRequest {
 }
 
 // Generic API response structure
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = Record<string, unknown>> {
   success: boolean;
   message?: string;
   data?: T;
@@ -57,5 +57,5 @@ export interface EmailSentData {
 export interface ValidationErrors {
   email?: string;
   statements?: string;
-  [key: string]: string | undefined;
+  [key: string]: unknown;
 }

@@ -229,7 +229,10 @@ const Dashboard = () => {
   useEffect(() => {
     refreshBalance();
     fetchHistory();
+    // fetchUserProfile is declared below — safe to call via wrapper
+    // eslint-disable-next-line react-hooks/immutability
     fetchUserProfile();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
