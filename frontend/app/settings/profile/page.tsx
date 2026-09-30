@@ -134,15 +134,6 @@ const UserProfile = () => {
 
   const router = useRouter();
 
-  useEffect(() => {
-    fetchUserProfile();
-
-    const firstName = getUserFirstName() || "";
-    const lastName = getUserLastName() || "";
-    setMetaMapData((prev) => ({ ...prev, firstName, lastName }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   const fetchUserProfile = async () => {
     try {
       const userId = getUserId();
@@ -210,6 +201,15 @@ const UserProfile = () => {
       setTimeout(() => setIsPageLoading(false), 2000);
     }
   };
+
+  useEffect(() => {
+    fetchUserProfile();
+
+    const firstName = getUserFirstName() || "";
+    const lastName = getUserLastName() || "";
+    setMetaMapData((prev) => ({ ...prev, firstName, lastName }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     document.title = "User Profile - ePay Online Business Banking";

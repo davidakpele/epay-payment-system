@@ -104,39 +104,24 @@ const Settings = () => {
     return () => clearTimeout(loadingTimer);
   }, []);
 
+  const checkPinStatus = () => {
+    const hasPin = getUserIsSetTransfer();
+    setUserHasPin(!!hasPin);
+    if (hasPin) {
+      setPinMode("update");
+    } else {
+      setPinMode("create");
+    }
+    // Reset form visibility when rechecking
+    setShowChangePinForm(false);
+    setShowCreatePinForm(false);
+    setPin(["", "", "", ""]);
+    setConfirmPin(["", "", "", ""]);
+    setCurrentPin(["", "", "", ""]);
+  };
+
   useEffect(() => {
     checkPinStatus();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    const loadProfileImageFromStorage = () => {
-      try {
-        const storedData = localStorage.getItem("data");
-        if (storedData) {
-          const parsedData = JSON.parse(storedData);
-          const userPhoto = parsedData?.user?.photo;
-
-          if (userPhoto && userPhoto !== "/assets/images/user-profile.jpg") {
-            setProfileImage(userPhoto);
-            setHasCustomImage(true);
-          } else {
-            setProfileImage("/assets/images/user-profile.jpg");
-            setHasCustomImage(false);
-          }
-        }
-      } catch (error) {
-        console.error("Error loading profile image from storage:", error);
-        setProfileImage("/assets/images/user-profile.jpg");
-        setHasCustomImage(false);
-      }
-    };
-
-    loadProfileImageFromStorage();
-  }, []);
-
-  useEffect(() => {
-    fetchUserProfile();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -287,21 +272,36 @@ const Settings = () => {
     }
   };
 
-  const checkPinStatus = () => {
-    const hasPin = getUserIsSetTransfer();
-    setUserHasPin(!!hasPin);
-    if (hasPin) {
-      setPinMode("update");
-    } else {
-      setPinMode("create");
-    }
-    // Reset form visibility when rechecking
-    setShowChangePinForm(false);
-    setShowCreatePinForm(false);
-    setPin(["", "", "", ""]);
-    setConfirmPin(["", "", "", ""]);
-    setCurrentPin(["", "", "", ""]);
-  };
+  useEffect(() => {
+    fetchUserProfile();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const loadProfileImageFromStorage = () => {
+      try {
+        const storedData = localStorage.getItem("data");
+        if (storedData) {
+          const parsedData = JSON.parse(storedData);
+          const userPhoto = parsedData?.user?.photo;
+
+          if (userPhoto && userPhoto !== "/assets/images/user-profile.jpg") {
+            setProfileImage(userPhoto);
+            setHasCustomImage(true);
+          } else {
+            setProfileImage("/assets/images/user-profile.jpg");
+            setHasCustomImage(false);
+          }
+        }
+      } catch (error) {
+        console.error("Error loading profile image from storage:", error);
+        setProfileImage("/assets/images/user-profile.jpg");
+        setHasCustomImage(false);
+      }
+    };
+
+    loadProfileImageFromStorage();
+  }, []);
 
   const [settings, setSettings] = useState<UserSettings>({
     profile: {
