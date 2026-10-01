@@ -1,0 +1,12 @@
+# Trivy ignore file — repo root (applies to all image scans via trivyignores: .trivyignore)
+#
+# Format: <CVE-ID> [expiry-date] [# comment]
+# Only add entries here when:
+#   a) the finding is a confirmed false positive, OR
+#   b) no fix is available upstream AND a compensating control exists
+# Each entry must have a comment stating the reason and a review date.
+#
+# ── Node.js stdlib CVEs with no Alpine-level fix at scan time ──────────────
+# CVE-2026-56846: Node.js 24 HTTP/2 maxSessionMemory bypass — fixed in Node 24.21+
+# Review when node:24-alpine next rebuild ships Node >= 24.21.
+# CVE-2026-56846 exp:2027-01-01

@@ -1,34 +1,35 @@
 # syntax=docker/dockerfile:1
 
-# ── Stage 1: Install dependencies ─────────────────────────────────────────
-FROM node:24.11.1-alpine AS dependencies
+# ── Stage 1: Install production dependencies ──────────────────────────────
+FROM node:24.20.0-alpine3.24 AS deps
+RUN apk upgrade --no-cache
 WORKDIR /app
-COPY package.json package-lock.json* ./
-RUN npm ci
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev
 
-# ── Stage 2: Build ─────────────────────────────────────────────────────────
-FROM node:24.11.1-alpine AS builder
+# ── Stage 2: Build ────────────────────────────────────────────────────────
+FROM node:24.20.0-alpine3.24 AS builder
+RUN apk upgrade --no-cache
 WORKDIR /app
-# Reuse the installed node_modules from the previous stage
-COPY --from=dependencies /app/node_modules ./node_modules
+COPY package.json package-lock.json ./
+RUN npm ci
 COPY . .
-# next build also runs ESLint; env vars needed at build time should be
-# passed via --build-arg / ARG declarations (add NEXT_PUBLIC_* here as
-# needed by the application).
 RUN npm run build
 
-# ── Stage 3: Runtime ───────────────────────────────────────────────────────
-FROM node:24.11.1-alpine AS runtime
+# ── Stage 3: Runtime (standalone output only) ─────────────────────────────
+FROM node:24.20.0-alpine3.24 AS runtime
+RUN apk upgrade --no-cache
+
 WORKDIR /app
-
 ENV NODE_ENV=production
+ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
 
-COPY --from=dependencies /app/node_modules ./node_modules
-COPY --from=builder /app/.next ./.next
+# standalone output embeds the minimal node_modules it needs
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
-COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/next.config.* ./
 
 EXPOSE 3000
 
-CMD ["npm", "run", "start"]
+CMD ["node", "server.js"]
