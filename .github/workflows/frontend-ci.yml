@@ -39,8 +39,6 @@ jobs:
 
       - name: Run ESLint
         working-directory: frontend
-        # ESLint 9 flat-config mode exits 0 for warnings, non-zero for errors only.
-        # --max-warnings is not supported in flat-config mode.
         run: npm run lint
 
       - name: Run TypeScript type check
