@@ -109,7 +109,8 @@ export interface Transaction {
   previousBalance?: number;
   availableBalance?: number;
   icon: React.ReactElement;
-  originalData: Record<string, unknown>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  originalData: any;
 }
 
 export interface StatusInfo {

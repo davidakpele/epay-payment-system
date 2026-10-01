@@ -39,7 +39,7 @@ export interface SendStatementRequest {
 }
 
 // Generic API response structure
-export interface ApiResponse<T = Record<string, unknown>> {
+export interface ApiResponse<T = any> {
   success: boolean;
   message?: string;
   data?: T;

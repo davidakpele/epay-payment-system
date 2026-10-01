@@ -100,7 +100,8 @@ const Flag = ({ src, alt }: { src: string; alt: string }) => (
 
 /** Map raw API card data → VirtualCard */
 const mapApiCard = (
-  raw: Record<string, unknown>,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  raw: any,
   userFullName: string,
 ): VirtualCard => {
   const currency = raw.currency || raw.currency_code || "USD";
@@ -141,7 +142,8 @@ const mapApiCard = (
 };
 
 /** Map raw API request history → CardRequest */
-const mapApiRequest = (raw: Record<string, unknown>): CardRequest => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const mapApiRequest = (raw: any): CardRequest => {
   const currency = raw.currency || raw.currency_code || "USD";
   const network: CardNetwork =
     String(raw.card_type || raw.cardType || raw.network || "").toLowerCase() ===
@@ -416,7 +418,7 @@ const VirtualCardsPage = () => {
 
   useEffect(() => {
     if (wallet?.wallet_balances) {
-      const filtered = (wallet.wallet_balances as Record<string, unknown>[])
+      const filtered = (wallet.wallet_balances as any[])
         .filter((w) => w.currency_code === "USD" || w.currency_code === "NGN")
         .map((w) => ({
           code: w.currency_code,

@@ -7,6 +7,7 @@ export interface UserNotification {
 export interface UserWallet {
   currency_code: string;
   balance: number;
+  symbol?: string;
   [key: string]: unknown;
 }
 

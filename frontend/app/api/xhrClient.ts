@@ -11,7 +11,7 @@ interface XhrClientOptions {
   ) => void;
 }
 const authPages = ["/"];
-const xhrClient = <T = Record<string, unknown>>(
+const xhrClient = <T = any>(
   api_url: string,
   method: string,
   headers: Record<string, string> = {},

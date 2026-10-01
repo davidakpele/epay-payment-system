@@ -4,13 +4,13 @@ export const mapStatementsToPayload = (
   statements: Record<string, unknown>[],
 ): StatementItemPayload[] => {
   return statements.map((item) => ({
-    id: item.id ?? "",
-    date: item.timestamp ?? item.createdOn ?? "",
-    description: item.description ?? "",
-    type: item.type ?? "",
-    currencyType: item.currencyType ?? "",
+    id: String(item.id ?? ""),
+    date: String(item.timestamp ?? item.createdOn ?? ""),
+    description: String(item.description ?? ""),
+    type: String(item.type ?? ""),
+    currencyType: String(item.currencyType ?? ""),
     amount: Number(item.amount ?? 0),
     balance: Number(item.availableBalance ?? item.previousBalance ?? 0),
-    reference: item.referenceNo ?? item.transactionId ?? "",
+    reference: String(item.referenceNo ?? item.transactionId ?? ""),
   }));
 };
