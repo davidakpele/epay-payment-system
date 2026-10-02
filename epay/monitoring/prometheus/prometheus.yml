@@ -36,7 +36,6 @@ scrape_configs:
           tier: backend
           cluster: epay-prod
     relabel_configs:
-      # Friendly instance label: epay-server-1, epay-server-2, epay-server-3
       - source_labels: [__address__]
         target_label: instance
         regex: "([^:]+):.*"
