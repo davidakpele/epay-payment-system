@@ -475,8 +475,10 @@ pipeline {
                     sh '''
                         if ! command -v trivy &>/dev/null; then
                             TRIVY_VERSION="0.58.2"
-                            curl -sfL "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz" \
-                                | tar xz -C /usr/local/bin trivy
+                            curl -sL -o /tmp/trivy.tar.gz \
+                                "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz"
+                            tar xz -C /usr/local/bin -f /tmp/trivy.tar.gz trivy
+                            rm /tmp/trivy.tar.gz
                         fi
                     '''
                     def images = [
