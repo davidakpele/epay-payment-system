@@ -91,14 +91,14 @@ jobs:
           [[ -z "${{ secrets.DEPLOY_HOST }}"    ]] && MISSING+=("DEPLOY_HOST")
           [[ -z "${{ secrets.DEPLOY_USER }}"    ]] && MISSING+=("DEPLOY_USER")
           if [[ ${#MISSING[@]} -gt 0 ]]; then
-            echo "❌ The following repository secrets are not set:"
+            echo "The following repository secrets are not set:"
             for s in "${MISSING[@]}"; do echo "   • $s"; done
             echo ""
             echo "Go to: Settings → Secrets and variables → Actions → New repository secret"
             echo "and add each missing secret before re-running this workflow."
             exit 1
           fi
-          echo "✅ All required secrets are present."
+          echo "All required secrets are present."
 
       - name: Set up SSH key
         run: |
@@ -121,15 +121,12 @@ jobs:
 
             cd ${{ env.DEPLOY_PATH }}
 
-            # ── Authenticate to GHCR ─────────────────────────────────────
             echo "${{ secrets.GITHUB_TOKEN }}" | \
               docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-            # ── Pull new images ──────────────────────────────────────────
             docker pull ${{ env.BACKEND_IMAGE }}:${{ steps.tags.outputs.backend_tag }}
             docker pull ${{ env.FRONTEND_IMAGE }}:${{ steps.tags.outputs.frontend_tag }}
 
-            # ── Tag as :latest so compose picks them up ──────────────────
             docker tag \
               ${{ env.BACKEND_IMAGE }}:${{ steps.tags.outputs.backend_tag }} \
               ${{ env.BACKEND_IMAGE }}:latest
@@ -137,7 +134,6 @@ jobs:
               ${{ env.FRONTEND_IMAGE }}:${{ steps.tags.outputs.frontend_tag }} \
               ${{ env.FRONTEND_IMAGE }}:latest
 
-            # ── Rolling restart — backend instances one at a time ────────
             for instance in epay-server-1 epay-server-2 epay-server-3; do
               echo ">>> Restarting ${instance}..."
               docker compose up -d --no-deps --no-recreate "${instance}" || \
