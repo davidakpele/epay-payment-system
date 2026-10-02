@@ -6,6 +6,13 @@ global:
     project: epay
     version: "2.0"
 
+# ── Alertmanager integration ───────────────────────────────────────────────
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - alertmanager:9093
+
 # Alert rules file
 rule_files:
   - /etc/prometheus/alert.rules.yml
@@ -110,6 +117,19 @@ scrape_configs:
         labels:
           service: prometheus
           tier: monitoring
+          cluster: epay-prod
+
+  # ============================================
+  #  cADVISOR — container resource metrics
+  # ============================================
+  - job_name: cadvisor
+    scrape_interval: 30s
+    scrape_timeout: 10s
+    static_configs:
+      - targets: ["cadvisor:8080"]
+        labels:
+          service: cadvisor
+          tier: container
           cluster: epay-prod
 
   # ============================================

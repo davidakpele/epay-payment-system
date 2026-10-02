@@ -446,6 +446,84 @@ services:
         max-size: "20m"
         max-file: "3"
 
+  # ============================================
+  #  ALERTMANAGER — routes Prometheus alerts to
+  #  email / Slack / PagerDuty / etc.
+  #  UI: http://localhost:9093
+  # ============================================
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: epay-alertmanager
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./epay/monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager_data:/alertmanager
+    command:
+      - "--config.file=/etc/alertmanager/alertmanager.yml"
+      - "--storage.path=/alertmanager"
+      - "--web.listen-address=:9093"
+      - "--cluster.listen-address="   # single-instance mode (no HA clustering)
+    environment:
+      SMTP_HOST:              ${SMTP_HOST:-smtp.gmail.com}
+      GMAIL_USERNAME:         ${GMAIL_USERNAME:-}
+      GMAIL_APP_PASSWORD:     ${GMAIL_APP_PASSWORD:-}
+      ALERT_FROM_EMAIL:       ${ALERT_FROM_EMAIL:-alerts@epay.app}
+      ALERT_EMAIL_TEAM:       ${ALERT_EMAIL_TEAM:-team@epay.app}
+      ALERT_EMAIL_CRITICAL:   ${ALERT_EMAIL_CRITICAL:-oncall@epay.app}
+      ALERT_EMAIL_PAYMENTS:   ${ALERT_EMAIL_PAYMENTS:-payments-team@epay.app}
+      SLACK_WEBHOOK_URL:      ${SLACK_WEBHOOK_URL:-}
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9093/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    networks:
+      - epay-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ============================================
+  #  cADVISOR — per-container CPU / memory /
+  #  network / disk metrics scraped by Prometheus
+  #  UI: http://localhost:8081
+  # ============================================
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    container_name: epay-cadvisor
+    privileged: true
+    devices:
+      - /dev/kmsg:/dev/kmsg
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+      - /cgroup:/cgroup:ro
+    ports:
+      - "8081:8080"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    restart: unless-stopped
+    networks:
+      - epay-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
 volumes:
   postgres_data:
     driver: local
@@ -464,6 +542,8 @@ volumes:
   loki_data:
     driver: local
   nginx_logs:
+    driver: local
+  alertmanager_data:
     driver: local
 
 networks:

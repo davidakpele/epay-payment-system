@@ -1,77 +1,68 @@
 // ─────────────────────────────────────────────────────────────────────────────
 //  ePay Payment System — Declarative Jenkins Pipeline
 //
-//  Stages mirror the GitHub Actions workflows:
-//    backend-ci.yml  →  Backend Build  +  Backend Docker
-//    frontend-ci.yml →  Frontend Lint  +  Frontend Build  +  Frontend Docker
-//    security-scan   →  OWASP  +  npm audit  +  Trivy
-//    deploy.yml      →  Deploy (SSH rolling restart — commented until hosted)
+//  Full pipeline stages:
+//    Initialise
+//    Backend  → Unit Tests → Integration Tests → k6 Smoke → Docker Build/Push
+//    Frontend → Lint → Vitest → Build → Playwright E2E → Docker Build/Push
+//    Security → OWASP → npm Audit → Trivy
+//    Deploy   → Production (SSH — commented until hosted)
 //
 //  Required Jenkins credentials (Manage Jenkins → Credentials):
-//    GHCR_USERNAME   — Kind: Secret text   — your GitHub username / org
-//    GHCR_TOKEN      — Kind: Secret text   — GitHub PAT with packages:write
-//    DEPLOY_SSH_KEY  — Kind: SSH private key (comment out deploy stage if not hosted)
-//    DEPLOY_HOST     — Kind: Secret text   — production server hostname / IP
-//    DEPLOY_USER     — Kind: Secret text   — SSH user on production server
-//    NVD_API_KEY     — Kind: Secret text   — NVD API key for OWASP DC (optional)
+//    GHCR_USERNAME   — Secret text  — GitHub username / org
+//    GHCR_TOKEN      — Secret text  — GitHub PAT with packages:write
+//    DEPLOY_SSH_KEY  — SSH private key (comment out deploy stage if not hosted)
+//    DEPLOY_HOST     — Secret text  — production server hostname / IP
+//    DEPLOY_USER     — Secret text  — SSH user on production server
+//    NVD_API_KEY     — Secret text  — NVD API key for OWASP DC (optional)
 //
 //  Required tools (Manage Jenkins → Tools):
-//    JDK: name="JDK21",  type=Temurin, version=21
-//    Node: name="Node24", version=24.11.1
+//    JDK:  name="JDK21",  Temurin 21
+//    Node: name="Node24", version 24.11.1
 //
 //  Required plugins:
 //    Pipeline, Git, Docker Pipeline, Credentials Binding,
-//    JUnit, HTML Publisher, Warnings Next Generation
+//    JUnit, HTML Publisher, Warnings Next Generation,
+//    NodeJS, Cobertura (or Coverage API)
 // ─────────────────────────────────────────────────────────────────────────────
 
 pipeline {
 
     agent any
 
-    // ── Tool declarations ──────────────────────────────────────────────────
     tools {
-        jdk  'JDK21'
+        jdk    'JDK21'
         nodejs 'Node24'
     }
 
-    // ── Pipeline-level environment ─────────────────────────────────────────
     environment {
         REGISTRY       = 'ghcr.io'
-        BACKEND_IMAGE  = "${REGISTRY}/${env.CHANGE_FORK ?: ''}/epay-server"   // overridden in stages
-        FRONTEND_IMAGE = "${REGISTRY}/${env.CHANGE_FORK ?: ''}/epay-frontend" // overridden in stages
         DEPLOY_PATH    = '/opt/epay-app'
         NODE_VERSION   = '24.11.1'
         MAVEN_OPTS     = '-Xmx1024m -XX:MaxMetaspaceSize=512m'
     }
 
-    // ── Build options ──────────────────────────────────────────────────────
     options {
         buildDiscarder(logRotator(numToKeepStr: '20', artifactNumToKeepStr: '5'))
         timestamps()
-        timeout(time: 60, unit: 'MINUTES')
+        timeout(time: 90, unit: 'MINUTES')
         disableConcurrentBuilds(abortPrevious: true)
     }
 
-    // ── Trigger on push / PR (when using a Multibranch Pipeline job) ───────
     triggers {
-        // Poll SCM every 5 min as a fallback if webhooks are not configured.
-        // Remove this if GitHub webhooks are set up (preferred).
         pollSCM('H/5 * * * *')
     }
 
-    // ═══════════════════════════════════════════════════════════════════════
-    //  PARAMETERS  (for manual / workflow_dispatch equivalent)
-    // ═══════════════════════════════════════════════════════════════════════
     parameters {
         string(
             name:         'BACKEND_TAG',
             defaultValue: 'latest',
-            description:  'Backend Docker image tag to deploy (e.g. main-abc1234)'
+            description:  'Backend Docker image tag to deploy'
         )
         string(
             name:         'FRONTEND_TAG',
             defaultValue: 'latest',
-            description:  'Frontend Docker image tag to deploy (e.g. main-abc1234)'
+            description:  'Frontend Docker image tag to deploy'
         )
         booleanParam(
             name:         'SKIP_HEALTH_CHECK',
@@ -81,28 +72,33 @@ pipeline {
         booleanParam(
             name:         'SKIP_SECURITY_SCAN',
             defaultValue: false,
-            description:  'Skip OWASP / npm audit / Trivy (speeds up dev branch builds)'
+            description:  'Skip OWASP / npm audit / Trivy'
+        )
+        booleanParam(
+            name:         'RUN_LOAD_TESTS',
+            defaultValue: false,
+            description:  'Run k6 load test (50 VUs) — only against staging'
+        )
+        booleanParam(
+            name:         'RUN_E2E',
+            defaultValue: true,
+            description:  'Run Playwright E2E tests'
         )
     }
 
     // ═══════════════════════════════════════════════════════════════════════
-    //  STAGES
-    // ═══════════════════════════════════════════════════════════════════════
     stages {
 
-        // ── 0. Resolve metadata ────────────────────────────────────────────
+        // ── 0. Initialise ────────────────────────────────────────────────
         stage('Initialise') {
             steps {
                 script {
-                    // Derive a short SHA for Docker image tagging
                     env.SHORT_SHA      = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
                     env.BRANCH_SLUG    = env.BRANCH_NAME?.replaceAll('[^a-zA-Z0-9]', '-')?.toLowerCase() ?: 'unknown'
                     env.IMAGE_TAG      = "${env.BRANCH_SLUG}-${env.SHORT_SHA}"
                     env.IS_MAIN        = (env.BRANCH_NAME == 'main').toString()
 
-                    // Resolve the full GHCR image names from the remote URL
                     def repoUrl        = sh(script: 'git remote get-url origin', returnStdout: true).trim()
-                    // e.g. https://github.com/owner/repo.git  or  git@github.com:owner/repo.git
                     def repoPath       = repoUrl
                         .replaceAll(/.*github\.com[:/]/, '')
                         .replaceAll(/\.git$/, '')
@@ -112,47 +108,148 @@ pipeline {
 
                     echo """
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  Branch     : ${env.BRANCH_NAME}
-  Commit     : ${env.SHORT_SHA}
-  Image tag  : ${env.IMAGE_TAG}
-  Backend    : ${env.BACKEND_IMAGE}
-  Frontend   : ${env.FRONTEND_IMAGE}
+  Branch       : ${env.BRANCH_NAME}
+  Commit       : ${env.SHORT_SHA}
+  Image tag    : ${env.IMAGE_TAG}
+  Backend      : ${env.BACKEND_IMAGE}
+  Frontend     : ${env.FRONTEND_IMAGE}
+  Load tests   : ${params.RUN_LOAD_TESTS}
+  E2E tests    : ${params.RUN_E2E}
+  Security     : ${!params.SKIP_SECURITY_SCAN}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"""
                 }
             }
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        //  BACKEND  CI
-        // ════════════════════════════════════════════════════════════════════
+        // ════════════════════════════════════════════════════════════════
+        //  BACKEND
+        // ════════════════════════════════════════════════════════════════
 
-        stage('Backend — Build & Test') {
+        stage('Backend — Unit Tests & Coverage') {
             steps {
                 dir('epay') {
                     sh 'chmod +x mvnw'
-                    sh './mvnw -B clean package -DskipTests --no-transfer-progress'
+                    sh './mvnw -B verify -P coverage --no-transfer-progress -Dsurefire.failIfNoSpecifiedTests=false'
                 }
             }
             post {
                 always {
-                    // Publish surefire XML test results
                     junit(
-                        testResults:          'epay/**/target/surefire-reports/*.xml',
-                        allowEmptyResults:    true,
+                        testResults:              'epay/**/target/surefire-reports/*.xml',
+                        allowEmptyResults:        true,
                         skipMarkingBuildUnstable: false
                     )
-                    // Archive the fat-jar
+                    // JaCoCo HTML coverage report
+                    publishHTML(target: [
+                        allowMissing:          true,
+                        alwaysLinkToLastBuild: true,
+                        keepAll:               true,
+                        reportDir:             'epay/main/target/site/jacoco',
+                        reportFiles:           'index.html',
+                        reportName:            'JaCoCo Coverage Report'
+                    ])
                     archiveArtifacts(
-                        artifacts:      'epay/main/target/epay-server.jar',
-                        allowEmptyArchive: false,
-                        fingerprint:    true
+                        artifacts:         'epay/**/target/site/jacoco/jacoco.xml',
+                        allowEmptyArchive: true
+                    )
+                }
+            }
+        }
+
+        stage('Backend — Build JAR') {
+            steps {
+                dir('epay') {
+                    sh './mvnw -B package -DskipTests --no-transfer-progress'
+                }
+            }
+            post {
+                success {
+                    archiveArtifacts(
+                        artifacts:   'epay/main/target/epay-server.jar',
+                        fingerprint: true
+                    )
+                }
+            }
+        }
+
+        stage('Backend — Integration Tests') {
+            // Only run on non-PR builds — Testcontainers needs Docker
+            when { not { changeRequest() } }
+            steps {
+                dir('epay') {
+                    sh '''
+                        ./mvnw -B verify -P integration-test \
+                            --no-transfer-progress \
+                            -Dsurefire.skip=true \
+                            -Dfailsafe.failIfNoSpecifiedTests=false
+                    '''
+                }
+            }
+            post {
+                always {
+                    junit(
+                        testResults:       'epay/**/target/failsafe-reports/*.xml',
+                        allowEmptyResults: true
+                    )
+                    archiveArtifacts(
+                        artifacts:         'epay/**/target/failsafe-reports/',
+                        allowEmptyArchive: true
+                    )
+                }
+            }
+        }
+
+        stage('Backend — k6 Smoke Test') {
+            when { not { changeRequest() } }
+            steps {
+                script {
+                    // Install k6 if not present
+                    sh '''
+                        if ! command -v k6 &>/dev/null; then
+                            curl -sfL https://github.com/grafana/k6/releases/download/v0.55.0/k6-v0.55.0-linux-amd64.tar.gz \
+                                | tar xz --strip-components=1 -C /usr/local/bin k6-v0.55.0-linux-amd64/k6
+                        fi
+                    '''
+
+                    // Run smoke test — expects a live API at BASE_URL
+                    // If no staging URL, run against localhost (assumes service started externally)
+                    def smokeUrl = env.STAGING_API_URL ?: 'http://localhost:8029'
+                    sh "k6 run -e BASE_URL=${smokeUrl} k6/smoke.js || true"
+                }
+            }
+        }
+
+        stage('Backend — k6 Load Test') {
+            when {
+                allOf {
+                    not { changeRequest() }
+                    expression { return params.RUN_LOAD_TESTS }
+                }
+            }
+            steps {
+                script {
+                    def loadUrl = env.STAGING_API_URL ?: 'http://localhost:8029'
+                    sh """
+                        k6 run \
+                            -e BASE_URL=${loadUrl} \
+                            -e TEST_USER_EMAIL=${env.LOAD_TEST_EMAIL ?: 'loadtest@epay.test'} \
+                            -e TEST_USER_PASS=${env.LOAD_TEST_PASS ?: 'LoadTest@123'} \
+                            --out json=k6-load-results.json \
+                            k6/load.js || true
+                    """
+                }
+            }
+            post {
+                always {
+                    archiveArtifacts(
+                        artifacts:         'k6-load-results.json',
+                        allowEmptyArchive: true
                     )
                 }
             }
         }
 
         stage('Backend — Docker Build & Push') {
-            // Only push images on push events (not PRs)
             when { not { changeRequest() } }
             steps {
                 script {
@@ -165,37 +262,22 @@ pipeline {
 
                     def tags = ["${env.BACKEND_IMAGE}:${env.IMAGE_TAG}",
                                 "${env.BACKEND_IMAGE}:${env.BRANCH_SLUG}"]
-
-                    if (env.IS_MAIN == 'true') {
-                        tags << "${env.BACKEND_IMAGE}:latest"
-                    }
+                    if (env.IS_MAIN == 'true') tags << "${env.BACKEND_IMAGE}:latest"
 
                     def tagArgs = tags.collect { "-t ${it}" }.join(' ')
-
-                    sh """
-                        docker build \\
-                            ${tagArgs} \\
-                            -f epay/Dockerfile \\
-                            epay/
-                    """
-
-                    tags.each { tag ->
-                        sh "docker push ${tag}"
-                    }
-
+                    sh "docker build ${tagArgs} -f epay/Dockerfile epay/"
+                    tags.each { sh "docker push ${it}" }
                     echo "Backend images pushed: ${tags.join(', ')}"
                 }
             }
             post {
-                always {
-                    sh "docker logout ghcr.io || true"
-                }
+                always { sh 'docker logout ghcr.io || true' }
             }
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        //  FRONTEND  CI
-        // ════════════════════════════════════════════════════════════════════
+        // ════════════════════════════════════════════════════════════════
+        //  FRONTEND
+        // ════════════════════════════════════════════════════════════════
 
         stage('Frontend — Lint & Type Check') {
             steps {
@@ -203,6 +285,31 @@ pipeline {
                     sh 'npm install'
                     sh 'npm run lint'
                     sh 'npx tsc --noEmit'
+                }
+            }
+        }
+
+        stage('Frontend — Vitest Unit Tests') {
+            steps {
+                dir('frontend') {
+                    sh 'npm run test:coverage'
+                }
+            }
+            post {
+                always {
+                    // lcov.info for coverage tools
+                    archiveArtifacts(
+                        artifacts:         'frontend/coverage/**',
+                        allowEmptyArchive: true
+                    )
+                    publishHTML(target: [
+                        allowMissing:          true,
+                        alwaysLinkToLastBuild: true,
+                        keepAll:               true,
+                        reportDir:             'frontend/coverage',
+                        reportFiles:           'index.html',
+                        reportName:            'Vitest Coverage Report'
+                    ])
                 }
             }
         }
@@ -220,12 +327,45 @@ pipeline {
             }
             post {
                 success {
-                    // Archive the Next.js standalone output so it can be
-                    // downloaded or used by downstream jobs
                     archiveArtifacts(
-                        artifacts:      'frontend/.next/**',
-                        allowEmptyArchive: true,
-                        fingerprint:    false
+                        artifacts:         'frontend/.next/**',
+                        allowEmptyArchive: true
+                    )
+                }
+            }
+        }
+
+        stage('Frontend — Playwright E2E Tests') {
+            when {
+                allOf {
+                    not { changeRequest() }
+                    expression { return params.RUN_E2E }
+                }
+            }
+            steps {
+                dir('frontend') {
+                    sh 'npx playwright install --with-deps chromium firefox'
+                    sh 'npm run test:e2e'
+                }
+            }
+            post {
+                always {
+                    // Publish JUnit XML results
+                    junit(
+                        testResults:       'frontend/playwright-results.xml',
+                        allowEmptyResults: true
+                    )
+                    publishHTML(target: [
+                        allowMissing:          true,
+                        alwaysLinkToLastBuild: true,
+                        keepAll:               true,
+                        reportDir:             'frontend/playwright-report',
+                        reportFiles:           'index.html',
+                        reportName:            'Playwright E2E Report'
+                    ])
+                    archiveArtifacts(
+                        artifacts:         'frontend/playwright-report/**',
+                        allowEmptyArchive: true
                     )
                 }
             }
@@ -244,38 +384,22 @@ pipeline {
 
                     def tags = ["${env.FRONTEND_IMAGE}:${env.IMAGE_TAG}",
                                 "${env.FRONTEND_IMAGE}:${env.BRANCH_SLUG}"]
-
-                    if (env.IS_MAIN == 'true') {
-                        tags << "${env.FRONTEND_IMAGE}:latest"
-                    }
+                    if (env.IS_MAIN == 'true') tags << "${env.FRONTEND_IMAGE}:latest"
 
                     def tagArgs = tags.collect { "-t ${it}" }.join(' ')
-
-                    sh """
-                        docker build \\
-                            ${tagArgs} \\
-                            --build-arg NODE_ENV=production \\
-                            -f frontend/Dockerfile \\
-                            frontend/
-                    """
-
-                    tags.each { tag ->
-                        sh "docker push ${tag}"
-                    }
-
+                    sh "docker build ${tagArgs} --build-arg NODE_ENV=production -f frontend/Dockerfile frontend/"
+                    tags.each { sh "docker push ${it}" }
                     echo "Frontend images pushed: ${tags.join(', ')}"
                 }
             }
             post {
-                always {
-                    sh "docker logout ghcr.io || true"
-                }
+                always { sh 'docker logout ghcr.io || true' }
             }
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        //  SECURITY  SCANS
-        // ════════════════════════════════════════════════════════════════════
+        // ════════════════════════════════════════════════════════════════
+        //  SECURITY SCANS
+        // ════════════════════════════════════════════════════════════════
 
         stage('Security — OWASP Dependency Check') {
             when {
@@ -286,9 +410,7 @@ pipeline {
             }
             steps {
                 dir('epay') {
-                    withCredentials([
-                        string(credentialsId: 'NVD_API_KEY', variable: 'NVD_KEY')
-                    ]) {
+                    withCredentials([string(credentialsId: 'NVD_API_KEY', variable: 'NVD_KEY')]) {
                         sh '''
                             ./mvnw -B --no-transfer-progress \
                                 org.owasp:dependency-check-maven:check \
@@ -305,15 +427,15 @@ pipeline {
             post {
                 always {
                     publishHTML(target: [
-                        allowMissing:       true,
+                        allowMissing:          true,
                         alwaysLinkToLastBuild: true,
-                        keepAll:            true,
-                        reportDir:          'epay/main/target',
-                        reportFiles:        'dependency-check-report.html',
-                        reportName:         'OWASP Dependency Check'
+                        keepAll:               true,
+                        reportDir:             'epay/main/target',
+                        reportFiles:           'dependency-check-report.html',
+                        reportName:            'OWASP Dependency Check'
                     ])
                     archiveArtifacts(
-                        artifacts:      'epay/**/target/dependency-check-report*',
+                        artifacts:         'epay/**/target/dependency-check-report*',
                         allowEmptyArchive: true
                     )
                 }
@@ -321,24 +443,20 @@ pipeline {
         }
 
         stage('Security — npm Audit') {
-            when {
-                expression { return !params.SKIP_SECURITY_SCAN }
-            }
+            when { expression { return !params.SKIP_SECURITY_SCAN } }
             steps {
                 dir('frontend') {
                     sh 'npm install'
                     sh '''
                         npm audit --audit-level=critical || true
-                        echo "--- Full audit report (informational) ---"
                         npm audit --json > npm-audit-report.json || true
-                        npm audit || true
                     '''
                 }
             }
             post {
                 always {
                     archiveArtifacts(
-                        artifacts:      'frontend/npm-audit-report.json',
+                        artifacts:         'frontend/npm-audit-report.json',
                         allowEmptyArchive: true
                     )
                 }
@@ -354,40 +472,24 @@ pipeline {
             }
             steps {
                 script {
-                    // Ensure trivy is available (install once if not present)
                     sh '''
                         if ! command -v trivy &>/dev/null; then
-                            echo "Installing Trivy..."
                             curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
                                 | sh -s -- -b /usr/local/bin v0.36.0
                         fi
                     '''
-
                     def images = [
                         [tag: "${env.BACKEND_IMAGE}:${env.IMAGE_TAG}",  name: 'epay-server'],
                         [tag: "${env.FRONTEND_IMAGE}:${env.IMAGE_TAG}", name: 'epay-frontend']
                     ]
-
                     images.each { img ->
-                        // Table output — human readable in console log
                         sh """
-                            trivy image \\
-                                --exit-code 0 \\
-                                --severity CRITICAL,HIGH \\
-                                --ignore-unfixed \\
-                                --ignorefile .trivyignore \\
-                                --format table \\
-                                ${img.tag} || true
-                        """
-                        // SARIF output — stored as artifact
-                        sh """
-                            trivy image \\
-                                --exit-code 0 \\
-                                --severity CRITICAL,HIGH \\
-                                --ignore-unfixed \\
-                                --ignorefile .trivyignore \\
-                                --format sarif \\
-                                --output trivy-${img.name}.sarif \\
+                            trivy image --exit-code 0 --severity CRITICAL,HIGH \
+                                --ignore-unfixed --ignorefile .trivyignore \
+                                --format table ${img.tag} || true
+                            trivy image --exit-code 0 --severity CRITICAL,HIGH \
+                                --ignore-unfixed --ignorefile .trivyignore \
+                                --format sarif --output trivy-${img.name}.sarif \
                                 ${img.tag} || true
                         """
                     }
@@ -395,17 +497,14 @@ pipeline {
             }
             post {
                 always {
-                    archiveArtifacts(
-                        artifacts:      'trivy-*.sarif',
-                        allowEmptyArchive: true
-                    )
+                    archiveArtifacts(artifacts: 'trivy-*.sarif', allowEmptyArchive: true)
                 }
             }
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        //  DEPLOY  (SSH rolling restart — commented out until app is hosted)
-        // ════════════════════════════════════════════════════════════════════
+        // ════════════════════════════════════════════════════════════════
+        //  DEPLOY  (commented out until hosted)
+        // ════════════════════════════════════════════════════════════════
 
         stage('Deploy — Production') {
             when {
@@ -422,100 +521,64 @@ pipeline {
                     echo """
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   DEPLOY SKIPPED — app is not yet hosted.
-  To activate:
-    1. Add DEPLOY_SSH_KEY, DEPLOY_HOST, DEPLOY_USER
-       credentials in Jenkins → Manage Credentials.
-    2. Uncomment the SSH block below.
+  Add DEPLOY_SSH_KEY, DEPLOY_HOST, DEPLOY_USER
+  credentials and uncomment the SSH block.
 
   Would deploy:
     Backend  : ${env.BACKEND_IMAGE}:${backendTag}
     Frontend : ${env.FRONTEND_IMAGE}:${frontendTag}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"""
 
-                    // ── Uncomment the block below once the server is ready ──
                     /*
                     withCredentials([
-                        sshUserPrivateKey(
-                            credentialsId:   'DEPLOY_SSH_KEY',
-                            keyFileVariable: 'SSH_KEY_FILE',
-                            usernameVariable:'SSH_USER'
-                        ),
-                        string(credentialsId: 'DEPLOY_HOST',     variable: 'SSH_HOST'),
-                        string(credentialsId: 'GHCR_TOKEN',      variable: 'GHCR_PASS'),
-                        string(credentialsId: 'GHCR_USERNAME',   variable: 'GHCR_USER')
+                        sshUserPrivateKey(credentialsId: 'DEPLOY_SSH_KEY',
+                                          keyFileVariable: 'SSH_KEY_FILE',
+                                          usernameVariable: 'SSH_USER'),
+                        string(credentialsId: 'DEPLOY_HOST',   variable: 'SSH_HOST'),
+                        string(credentialsId: 'GHCR_TOKEN',    variable: 'GHCR_PASS'),
+                        string(credentialsId: 'GHCR_USERNAME', variable: 'GHCR_USER')
                     ]) {
-                        // Copy compose file and env to server
                         sh """
                             scp -i ${SSH_KEY_FILE} -o StrictHostKeyChecking=no \\
                                 docker-compose.yml .env \\
                                 ${SSH_USER}@${SSH_HOST}:${DEPLOY_PATH}/
                         """
-
                         sh """
                             ssh -i ${SSH_KEY_FILE} -o StrictHostKeyChecking=no \\
                                 ${SSH_USER}@${SSH_HOST} bash -s << 'ENDSSH'
                             set -euo pipefail
                             cd ${DEPLOY_PATH}
-
                             echo '${GHCR_PASS}' | docker login ghcr.io -u '${GHCR_USER}' --password-stdin
-
                             docker pull ${env.BACKEND_IMAGE}:${backendTag}
                             docker pull ${env.FRONTEND_IMAGE}:${frontendTag}
-
-                            docker tag ${env.BACKEND_IMAGE}:${backendTag}  ${env.BACKEND_IMAGE}:latest
+                            docker tag ${env.BACKEND_IMAGE}:${backendTag} ${env.BACKEND_IMAGE}:latest
                             docker tag ${env.FRONTEND_IMAGE}:${frontendTag} ${env.FRONTEND_IMAGE}:latest
-
-                            for instance in epay-server-1 epay-server-2 epay-server-3; do
-                                echo ">>> Restarting \${instance}..."
-                                docker compose up -d --no-deps \${instance}
+                            for s in epay-server-1 epay-server-2 epay-server-3; do
+                                docker compose up -d --no-deps \${s}
                                 for i in \$(seq 1 12); do
-                                    STATUS=\$(docker inspect --format='{{.State.Health.Status}}' "\${instance}" 2>/dev/null || echo unknown)
-                                    echo "  [\${i}/12] \${instance}: \${STATUS}"
+                                    STATUS=\$(docker inspect --format='{{.State.Health.Status}}' "\${s}" 2>/dev/null || echo unknown)
                                     [ "\${STATUS}" = "healthy" ] && break
-                                    [ "\${i}" = "12" ] && { echo "ERROR: \${instance} unhealthy"; exit 1; }
+                                    [ "\${i}" = "12" ] && { echo "ERROR: \${s} unhealthy"; exit 1; }
                                     sleep 10
                                 done
                             done
-
-                            for instance in epay-frontend-1 epay-frontend-2 epay-frontend-3; do
-                                echo ">>> Restarting \${instance}..."
-                                docker compose up -d --no-deps \${instance}
+                            for s in epay-frontend-1 epay-frontend-2 epay-frontend-3; do
+                                docker compose up -d --no-deps \${s}
                                 for i in \$(seq 1 9); do
-                                    STATUS=\$(docker inspect --format='{{.State.Health.Status}}' "\${instance}" 2>/dev/null || echo unknown)
-                                    echo "  [\${i}/9] \${instance}: \${STATUS}"
+                                    STATUS=\$(docker inspect --format='{{.State.Health.Status}}' "\${s}" 2>/dev/null || echo unknown)
                                     [ "\${STATUS}" = "healthy" ] && break
-                                    [ "\${i}" = "9" ] && { echo "ERROR: \${instance} unhealthy"; exit 1; }
+                                    [ "\${i}" = "9" ] && { echo "ERROR: \${s} unhealthy"; exit 1; }
                                     sleep 10
                                 done
                             done
-
-                            echo ">>> Restarting nginx..."
                             docker compose up -d --no-deps nginx
-                            for i in \$(seq 1 6); do
-                                STATUS=\$(docker inspect --format='{{.State.Health.Status}}' "epay-nginx" 2>/dev/null || echo unknown)
-                                echo "  [\${i}/6] epay-nginx: \${STATUS}"
-                                [ "\${STATUS}" = "healthy" ] && break
-                                [ "\${i}" = "6" ] && { echo "ERROR: nginx unhealthy"; exit 1; }
-                                sleep 10
-                            done
-
                             docker image prune -f
                             echo "Deployment complete."
                             ENDSSH
                         """
                     }
-
-                    // Post-deploy health check
-                    if (!params.SKIP_HEALTH_CHECK) {
-                        def productionUrl = env.PRODUCTION_URL ?: ''
-                        if (productionUrl) {
-                            retry(10) {
-                                sleep 15
-                                sh "curl -sf ${productionUrl}/actuator/health"
-                            }
-                        } else {
-                            echo "PRODUCTION_URL not set — skipping health check."
-                        }
+                    if (!params.SKIP_HEALTH_CHECK && env.PRODUCTION_URL) {
+                        retry(10) { sleep 15; sh "curl -sf ${env.PRODUCTION_URL}/actuator/health" }
                     }
                     */
                 }
@@ -525,14 +588,10 @@ pipeline {
     } // end stages
 
     // ═══════════════════════════════════════════════════════════════════════
-    //  POST  ACTIONS
-    // ═══════════════════════════════════════════════════════════════════════
     post {
         always {
-            // Clean up dangling Docker images to keep the build host tidy
             sh 'docker image prune -f || true'
         }
-
         success {
             echo """
 ╔══════════════════════════════════════════════════╗
@@ -541,7 +600,6 @@ pipeline {
 ║  Commit : ${env.SHORT_SHA?.padRight(38)}  ║
 ╚══════════════════════════════════════════════════╝"""
         }
-
         failure {
             echo """
 ╔══════════════════════════════════════════════════╗
@@ -549,21 +607,10 @@ pipeline {
 ║  Branch : ${env.BRANCH_NAME?.padRight(38)}  ║
 ║  Commit : ${env.SHORT_SHA?.padRight(38)}  ║
 ╚══════════════════════════════════════════════════╝"""
-            // Uncomment to send email notifications:
-            // emailext(
-            //     to:      'team@example.com',
-            //     subject: "FAILED: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-            //     body:    "Build URL: ${env.BUILD_URL}"
-            // )
+            // emailext(to: 'team@epay.app', subject: "FAILED: ${env.JOB_NAME} #${env.BUILD_NUMBER}", body: "Build URL: ${env.BUILD_URL}")
         }
-
         cleanup {
-            cleanWs(
-                cleanWhenSuccess:  false,  // keep workspace on success for debugging
-                cleanWhenFailure:  false,
-                cleanWhenAborted:  true,
-                deleteDirs:        true
-            )
+            cleanWs(cleanWhenAborted: true, deleteDirs: true)
         }
     }
 }
