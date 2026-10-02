@@ -240,10 +240,16 @@ jobs:
             --output trivy-${{ matrix.image_suffix }}.sarif \
             scan-target/${{ matrix.image_suffix }}:latest || true
 
-      - name: Upload Trivy SARIF to GitHub Security tab
+      - name: Upload Trivy SARIF as artifact
         if: always()
-        continue-on-error: true
-        uses: github/codeql-action/upload-sarif@v3
+        uses: actions/upload-artifact@v4
         with:
-          sarif_file: trivy-${{ matrix.image_suffix }}.sarif
-          category: trivy-${{ matrix.image_suffix }}
+          name: trivy-sarif-${{ matrix.image_suffix }}
+          path: trivy-${{ matrix.image_suffix }}.sarif
+          retention-days: 30
+          # To surface findings in the GitHub Security tab, enable Code Scanning
+          # under Settings → Security → Code scanning, then replace this step with:
+          # uses: github/codeql-action/upload-sarif@v3
+          # with:
+          #   sarif_file: trivy-${{ matrix.image_suffix }}.sarif
+          #   category: trivy-${{ matrix.image_suffix }}
