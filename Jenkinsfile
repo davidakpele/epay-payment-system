@@ -474,8 +474,9 @@ pipeline {
                 script {
                     sh '''
                         if ! command -v trivy &>/dev/null; then
-                            curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
-                                | sh -s -- -b /usr/local/bin v0.36.0
+                            TRIVY_VERSION="0.58.2"
+                            curl -sfL "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz" \
+                                | tar xz -C /usr/local/bin trivy
                         fi
                     '''
                     def images = [
@@ -486,9 +487,11 @@ pipeline {
                         sh """
                             trivy image --exit-code 0 --severity CRITICAL,HIGH \
                                 --ignore-unfixed --ignorefile .trivyignore \
+                                --skip-java-db-update \
                                 --format table ${img.tag} || true
                             trivy image --exit-code 0 --severity CRITICAL,HIGH \
                                 --ignore-unfixed --ignorefile .trivyignore \
+                                --skip-java-db-update \
                                 --format sarif --output trivy-${img.name}.sarif \
                                 ${img.tag} || true
                         """
