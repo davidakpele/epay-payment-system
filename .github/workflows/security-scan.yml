@@ -5,21 +5,19 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main, develop]
-  # Run every Monday at 08:00 UTC to catch newly disclosed CVEs
   schedule:
     - cron: "0 8 * * 1"
   workflow_dispatch:
 
 permissions:
   contents: read
-  security-events: write # Required to upload SARIF results to GitHub Security tab
+  security-events: write 
   actions: read
 
 env:
   NODE_VERSION: "24.11.1"
 
 jobs:
-  # ── 1. OWASP Dependency-Check (Backend) ───────────────────────────────────
   owasp-dependency-check:
     name: OWASP Dependency Check (Backend)
     runs-on: ubuntu-latest
@@ -60,7 +58,6 @@ jobs:
           path: epay/**/target/dependency-check-report*
           retention-days: 30
 
-  # ── 2. npm audit (Frontend) ────────────────────────────────────────────────
   npm-audit:
     name: npm Audit (Frontend)
     runs-on: ubuntu-latest
@@ -80,7 +77,6 @@ jobs:
 
       - name: Run npm audit
         working-directory: frontend
-        # Report all vulnerabilities but only fail on CRITICAL.
         run: |
           npm audit --audit-level=critical || true
           echo "--- Full audit report (informational) ---"
@@ -94,13 +90,9 @@ jobs:
           name: npm-audit-report
           path: frontend/npm-audit-report.json
           retention-days: 30
-
-  # ── 3. CodeQL static analysis ─────────────────────────────────────────────
   codeql:
     name: CodeQL Analysis
     runs-on: ubuntu-latest
-    # CodeQL is resource-heavy; skip on every PR push to keep it fast.
-    # It still runs on push to main/develop and on the weekly schedule.
     if: >
       github.event_name == 'push' ||
       github.event_name == 'schedule' ||
@@ -127,7 +119,6 @@ jobs:
         uses: github/codeql-action/init@v3
         with:
           languages: ${{ matrix.language }}
-          # Enable security-extended queries for broader coverage
           queries: security-extended
 
       - name: Make Maven wrapper executable

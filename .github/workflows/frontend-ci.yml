@@ -74,8 +74,6 @@ jobs:
         run: npm run build
         env:
           NODE_ENV: production
-          # vars.NEXT_PUBLIC_API_URL must be set under Settings → Variables → Actions.
-          # Falls back to localhost if the variable is not configured.
           NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL != '' && vars.NEXT_PUBLIC_API_URL || 'http://localhost:8029' }}
 
       - name: Upload build artifact
