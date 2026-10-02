@@ -60,9 +60,13 @@ jobs:
       name: production
       url: ${{ vars.PRODUCTION_URL }}
 
+    permissions:
+      contents: read
+      packages: read
+
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
 
       - name: Resolve image tags
         id: tags
@@ -107,7 +111,8 @@ jobs:
         run: |
           scp -i ~/.ssh/deploy_key \
             docker-compose.yml \
-            ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:${{ env.DEPLOY_PATH }}/docker-compose.yml
+            .env \
+            ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:${{ env.DEPLOY_PATH }}/
 
       - name: Deploy on remote server
         run: |
@@ -167,8 +172,19 @@ jobs:
               done
             done
 
-            # ── Reload nginx to pick up any config changes ───────────────
+            # ── Reload nginx to pick up any config or image changes ──────
+            echo ">>> Restarting nginx..."
             docker compose up -d --no-deps nginx
+            for i in $(seq 1 6); do
+              STATUS=$(docker inspect --format='{{.State.Health.Status}}' "epay-nginx" 2>/dev/null || echo "unknown")
+              echo "  [${i}/6] epay-nginx health: ${STATUS}"
+              if [[ "${STATUS}" == "healthy" ]]; then break; fi
+              if [[ "${i}" == "6" ]]; then
+                echo "ERROR: epay-nginx did not become healthy in time."
+                exit 1
+              fi
+              sleep 10
+            done
 
             # ── Prune dangling images to reclaim disk space ──────────────
             docker image prune -f

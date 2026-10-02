@@ -15,6 +15,9 @@ permissions:
   security-events: write # Required to upload SARIF results to GitHub Security tab
   actions: read
 
+env:
+  NODE_VERSION: "24.11.1"
+
 jobs:
   # ── 1. OWASP Dependency-Check (Backend) ───────────────────────────────────
   owasp-dependency-check:
@@ -23,13 +26,13 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
 
       # The dedicated Docker action ships its own pre-downloaded NVD DB,
       # which avoids the "exit code 126" caused by the Maven plugin trying
       # to exec native binaries in a constrained runner environment.
       - name: Run OWASP Dependency-Check
-        uses: dependency-check/Dependency-Check_Action@main
+        uses: dependency-check/Dependency-Check_Action@v3.0.0
         with:
           project: "epay-server"
           path: "./epay"
@@ -57,12 +60,12 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20.19.0"
+          node-version: ${{ env.NODE_VERSION }}
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
@@ -73,8 +76,6 @@ jobs:
       - name: Run npm audit
         working-directory: frontend
         # Report all vulnerabilities but only fail on CRITICAL.
-        # Next.js 16.1.1 has known HIGH CVEs patched in 16.3.8 — treat those
-        # as warnings until the dependency is upgraded in the application.
         run: |
           npm audit --audit-level=critical || true
           echo "--- Full audit report (informational) ---"
@@ -107,20 +108,18 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
 
-      # setup-java v5 — resolves the v4 deprecation warning
       - name: Set up JDK 21 (required for Java CodeQL)
         if: matrix.language == 'java'
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v4
         with:
           java-version: "21"
           distribution: "temurin"
           cache: maven
 
-      # CodeQL v4 — resolves the v3 deprecation warning
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v4
+        uses: github/codeql-action/init@v3
         with:
           languages: ${{ matrix.language }}
           # Enable security-extended queries for broader coverage
@@ -138,10 +137,10 @@ jobs:
 
       - name: Autobuild (JavaScript/TypeScript)
         if: matrix.language == 'javascript'
-        uses: github/codeql-action/autobuild@v4
+        uses: github/codeql-action/autobuild@v3
 
       - name: Perform CodeQL analysis
-        uses: github/codeql-action/analyze@v4
+        uses: github/codeql-action/analyze@v3
         with:
           category: "/language:${{ matrix.language }}"
           upload: true
@@ -171,15 +170,12 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
 
       # ── Backend only: build the fat-jar so Docker COPY can find it ─────
-      # The Dockerfile expects main/target/epay-server.jar (relative to the
-      # ./epay build context). Without this step the Docker build fails with
-      # "lstat /main/target: no such file or directory".
       - name: Set up JDK 21 (backend image only)
         if: matrix.needs_maven
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v4
         with:
           java-version: "21"
           distribution: "temurin"
@@ -208,7 +204,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Trivy scan (table — visibility)
-        uses: aquasecurity/trivy-action@v0.36.0
+        uses: aquasecurity/trivy-action@0.36.0
         with:
           image-ref: scan-target/${{ matrix.image_suffix }}:latest
           format: table
@@ -220,7 +216,7 @@ jobs:
 
       - name: Run Trivy vulnerability scanner
         id: trivy-scan
-        uses: aquasecurity/trivy-action@v0.36.0
+        uses: aquasecurity/trivy-action@0.36.0
         with:
           image-ref: scan-target/${{ matrix.image_suffix }}:latest
           format: sarif
@@ -233,7 +229,7 @@ jobs:
 
       - name: Upload Trivy SARIF to GitHub Security tab
         if: always()
-        uses: github/codeql-action/upload-sarif@v4
+        uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: trivy-${{ matrix.image_suffix }}.sarif
           category: trivy-${{ matrix.image_suffix }}
