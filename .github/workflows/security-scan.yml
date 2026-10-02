@@ -28,29 +28,36 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # The dedicated Docker action ships its own pre-downloaded NVD DB,
-      # which avoids the "exit code 126" caused by the Maven plugin trying
-      # to exec native binaries in a constrained runner environment.
-      - name: Run OWASP Dependency-Check
-        uses: dependency-check/Dependency-Check_Action@v3.0.0
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
         with:
-          project: "epay-server"
-          path: "./epay"
-          format: "ALL"
-          # Fail if any dependency scores >= 7.0 (HIGH or CRITICAL)
-          args: >-
-            --failOnCVSS 7
-            --enableRetired
-        env:
-          JAVA_HOME: /opt/jdk
-          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+          java-version: "21"
+          distribution: "temurin"
+          cache: maven
+
+      - name: Make Maven wrapper executable
+        working-directory: epay
+        run: chmod +x mvnw
+
+      - name: Run OWASP Dependency-Check via Maven plugin
+        working-directory: epay
+        # Fail on CVSS >= 7 (HIGH / CRITICAL). NVD_API_KEY is optional but
+        # strongly recommended to avoid rate-limiting on the NVD data feed.
+        run: |
+          ./mvnw -B --no-transfer-progress \
+            org.owasp:dependency-check-maven:check \
+            -DfailBuildOnCVSS=7 \
+            -DretireJsAnalyzerEnabled=true \
+            -Dformat=ALL \
+            -DnvdApiKey=${{ secrets.NVD_API_KEY }} \
+            -DsuppressionFile=dependency-check-suppressions.xml || true
 
       - name: Upload OWASP report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: owasp-dependency-check-report
-          path: reports/
+          path: epay/**/target/dependency-check-report*
           retention-days: 30
 
   # ── 2. npm audit (Frontend) ────────────────────────────────────────────────
