@@ -84,132 +84,137 @@ jobs:
           echo "frontend_tag=${FRONTEND_TAG}" >> "$GITHUB_OUTPUT"
           echo "Deploying backend:${BACKEND_TAG}  frontend:${FRONTEND_TAG}"
 
-      - name: Verify required secrets are configured
+      # ── SSH deploy steps are commented out until the app is hosted ────────
+      # Uncomment everything below (down to "Clean up SSH key") once you have:
+      #   DEPLOY_SSH_KEY, DEPLOY_HOST, DEPLOY_USER secrets set in GitHub and
+      #   PRODUCTION_URL variable set under Settings → Secrets and variables.
+
+      # - name: Verify required secrets are configured
+      #   run: |
+      #     MISSING=()
+      #     [[ -z "${{ secrets.DEPLOY_SSH_KEY }}" ]] && MISSING+=("DEPLOY_SSH_KEY")
+      #     [[ -z "${{ secrets.DEPLOY_HOST }}"    ]] && MISSING+=("DEPLOY_HOST")
+      #     [[ -z "${{ secrets.DEPLOY_USER }}"    ]] && MISSING+=("DEPLOY_USER")
+      #     if [[ ${#MISSING[@]} -gt 0 ]]; then
+      #       echo "The following repository secrets are not set:"
+      #       for s in "${MISSING[@]}"; do echo "   • $s"; done
+      #       exit 1
+      #     fi
+      #     echo "All required secrets are present."
+
+      # - name: Set up SSH key
+      #   run: |
+      #     mkdir -p ~/.ssh
+      #     echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+      #     chmod 600 ~/.ssh/deploy_key
+      #     ssh-keyscan -H "${{ secrets.DEPLOY_HOST }}" >> ~/.ssh/known_hosts
+
+      # - name: Copy docker-compose and env files to server
+      #   run: |
+      #     scp -i ~/.ssh/deploy_key \
+      #       docker-compose.yml \
+      #       .env \
+      #       ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:${{ env.DEPLOY_PATH }}/
+
+      # - name: Deploy on remote server
+      #   run: |
+      #     ssh -i ~/.ssh/deploy_key ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} bash -s << 'ENDSSH'
+      #       set -euo pipefail
+      #       cd ${{ env.DEPLOY_PATH }}
+      #
+      #       echo "${{ secrets.GITHUB_TOKEN }}" | \
+      #         docker login ghcr.io -u ${{ github.actor }} --password-stdin
+      #
+      #       docker pull ${{ env.BACKEND_IMAGE }}:${{ steps.tags.outputs.backend_tag }}
+      #       docker pull ${{ env.FRONTEND_IMAGE }}:${{ steps.tags.outputs.frontend_tag }}
+      #
+      #       docker tag \
+      #         ${{ env.BACKEND_IMAGE }}:${{ steps.tags.outputs.backend_tag }} \
+      #         ${{ env.BACKEND_IMAGE }}:latest
+      #       docker tag \
+      #         ${{ env.FRONTEND_IMAGE }}:${{ steps.tags.outputs.frontend_tag }} \
+      #         ${{ env.FRONTEND_IMAGE }}:latest
+      #
+      #       for instance in epay-server-1 epay-server-2 epay-server-3; do
+      #         echo ">>> Restarting ${instance}..."
+      #         docker compose up -d --no-deps --no-recreate "${instance}" || \
+      #           docker compose up -d --no-deps "${instance}"
+      #         for i in $(seq 1 12); do
+      #           STATUS=$(docker inspect --format='{{.State.Health.Status}}' "${instance}" 2>/dev/null || echo "unknown")
+      #           echo "  [${i}/12] ${instance} health: ${STATUS}"
+      #           if [[ "${STATUS}" == "healthy" ]]; then break; fi
+      #           if [[ "${i}" == "12" ]]; then
+      #             echo "ERROR: ${instance} did not become healthy in time."
+      #             exit 1
+      #           fi
+      #           sleep 10
+      #         done
+      #       done
+      #
+      #       for instance in epay-frontend-1 epay-frontend-2 epay-frontend-3; do
+      #         echo ">>> Restarting ${instance}..."
+      #         docker compose up -d --no-deps --no-recreate "${instance}" || \
+      #           docker compose up -d --no-deps "${instance}"
+      #         for i in $(seq 1 9); do
+      #           STATUS=$(docker inspect --format='{{.State.Health.Status}}' "${instance}" 2>/dev/null || echo "unknown")
+      #           echo "  [${i}/9] ${instance} health: ${STATUS}"
+      #           if [[ "${STATUS}" == "healthy" ]]; then break; fi
+      #           if [[ "${i}" == "9" ]]; then
+      #             echo "ERROR: ${instance} did not become healthy in time."
+      #             exit 1
+      #           fi
+      #           sleep 10
+      #         done
+      #       done
+      #
+      #       echo ">>> Restarting nginx..."
+      #       docker compose up -d --no-deps nginx
+      #       for i in $(seq 1 6); do
+      #         STATUS=$(docker inspect --format='{{.State.Health.Status}}' "epay-nginx" 2>/dev/null || echo "unknown")
+      #         echo "  [${i}/6] epay-nginx health: ${STATUS}"
+      #         if [[ "${STATUS}" == "healthy" ]]; then break; fi
+      #         if [[ "${i}" == "6" ]]; then
+      #           echo "ERROR: epay-nginx did not become healthy in time."
+      #           exit 1
+      #         fi
+      #         sleep 10
+      #       done
+      #
+      #       docker image prune -f
+      #       echo "✅ Deployment complete."
+      #     ENDSSH
+
+      # - name: Post-deploy health check
+      #   if: ${{ github.event.inputs.skip_health_check != 'true' }}
+      #   run: |
+      #     PRODUCTION_URL="${{ vars.PRODUCTION_URL }}"
+      #     if [[ -z "${PRODUCTION_URL}" ]]; then
+      #       echo "PRODUCTION_URL variable not set — skipping external health check."
+      #       exit 0
+      #     fi
+      #     echo "Checking ${PRODUCTION_URL}/actuator/health ..."
+      #     for i in $(seq 1 10); do
+      #       HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+      #         "${PRODUCTION_URL}/actuator/health" || echo "000")
+      #       echo "  Attempt ${i}: HTTP ${HTTP_STATUS}"
+      #       if [[ "${HTTP_STATUS}" == "200" ]]; then
+      #         echo "✅ Health check passed."
+      #         exit 0
+      #       fi
+      #       sleep 15
+      #     done
+      #     echo "❌ Health check failed after all retries."
+      #     exit 1
+
+      # - name: Clean up SSH key
+      #   if: always()
+      #   run: rm -f ~/.ssh/deploy_key
+
+      - name: Deployment skipped (not yet hosted)
         run: |
-          MISSING=()
-          [[ -z "${{ secrets.DEPLOY_SSH_KEY }}" ]] && MISSING+=("DEPLOY_SSH_KEY")
-          [[ -z "${{ secrets.DEPLOY_HOST }}"    ]] && MISSING+=("DEPLOY_HOST")
-          [[ -z "${{ secrets.DEPLOY_USER }}"    ]] && MISSING+=("DEPLOY_USER")
-          if [[ ${#MISSING[@]} -gt 0 ]]; then
-            echo "The following repository secrets are not set:"
-            for s in "${MISSING[@]}"; do echo "   • $s"; done
-            echo ""
-            echo "Go to: Settings → Secrets and variables → Actions → New repository secret"
-            echo "and add each missing secret before re-running this workflow."
-            exit 1
-          fi
-          echo "All required secrets are present."
-
-      - name: Set up SSH key
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H "${{ secrets.DEPLOY_HOST }}" >> ~/.ssh/known_hosts
-
-      - name: Copy docker-compose and env files to server
-        run: |
-          scp -i ~/.ssh/deploy_key \
-            docker-compose.yml \
-            .env \
-            ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:${{ env.DEPLOY_PATH }}/
-
-      - name: Deploy on remote server
-        run: |
-          ssh -i ~/.ssh/deploy_key ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} bash -s << 'ENDSSH'
-            set -euo pipefail
-
-            cd ${{ env.DEPLOY_PATH }}
-
-            echo "${{ secrets.GITHUB_TOKEN }}" | \
-              docker login ghcr.io -u ${{ github.actor }} --password-stdin
-
-            docker pull ${{ env.BACKEND_IMAGE }}:${{ steps.tags.outputs.backend_tag }}
-            docker pull ${{ env.FRONTEND_IMAGE }}:${{ steps.tags.outputs.frontend_tag }}
-
-            docker tag \
-              ${{ env.BACKEND_IMAGE }}:${{ steps.tags.outputs.backend_tag }} \
-              ${{ env.BACKEND_IMAGE }}:latest
-            docker tag \
-              ${{ env.FRONTEND_IMAGE }}:${{ steps.tags.outputs.frontend_tag }} \
-              ${{ env.FRONTEND_IMAGE }}:latest
-
-            for instance in epay-server-1 epay-server-2 epay-server-3; do
-              echo ">>> Restarting ${instance}..."
-              docker compose up -d --no-deps --no-recreate "${instance}" || \
-                docker compose up -d --no-deps "${instance}"
-              # Wait for health before moving to the next instance
-              for i in $(seq 1 12); do
-                STATUS=$(docker inspect --format='{{.State.Health.Status}}' "${instance}" 2>/dev/null || echo "unknown")
-                echo "  [${i}/12] ${instance} health: ${STATUS}"
-                if [[ "${STATUS}" == "healthy" ]]; then break; fi
-                if [[ "${i}" == "12" ]]; then
-                  echo "ERROR: ${instance} did not become healthy in time."
-                  exit 1
-                fi
-                sleep 10
-              done
-            done
-
-            # ── Rolling restart — frontend instances ─────────────────────
-            for instance in epay-frontend-1 epay-frontend-2 epay-frontend-3; do
-              echo ">>> Restarting ${instance}..."
-              docker compose up -d --no-deps --no-recreate "${instance}" || \
-                docker compose up -d --no-deps "${instance}"
-              for i in $(seq 1 9); do
-                STATUS=$(docker inspect --format='{{.State.Health.Status}}' "${instance}" 2>/dev/null || echo "unknown")
-                echo "  [${i}/9] ${instance} health: ${STATUS}"
-                if [[ "${STATUS}" == "healthy" ]]; then break; fi
-                if [[ "${i}" == "9" ]]; then
-                  echo "ERROR: ${instance} did not become healthy in time."
-                  exit 1
-                fi
-                sleep 10
-              done
-            done
-
-            # ── Reload nginx to pick up any config or image changes ──────
-            echo ">>> Restarting nginx..."
-            docker compose up -d --no-deps nginx
-            for i in $(seq 1 6); do
-              STATUS=$(docker inspect --format='{{.State.Health.Status}}' "epay-nginx" 2>/dev/null || echo "unknown")
-              echo "  [${i}/6] epay-nginx health: ${STATUS}"
-              if [[ "${STATUS}" == "healthy" ]]; then break; fi
-              if [[ "${i}" == "6" ]]; then
-                echo "ERROR: epay-nginx did not become healthy in time."
-                exit 1
-              fi
-              sleep 10
-            done
-
-            # ── Prune dangling images to reclaim disk space ──────────────
-            docker image prune -f
-
-            echo "✅ Deployment complete."
-          ENDSSH
-
-      - name: Post-deploy health check
-        if: ${{ github.event.inputs.skip_health_check != 'true' }}
-        run: |
-          PRODUCTION_URL="${{ vars.PRODUCTION_URL }}"
-          if [[ -z "${PRODUCTION_URL}" ]]; then
-            echo "PRODUCTION_URL variable not set — skipping external health check."
-            exit 0
-          fi
-          echo "Checking ${PRODUCTION_URL}/actuator/health ..."
-          for i in $(seq 1 10); do
-            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-              "${PRODUCTION_URL}/actuator/health" || echo "000")
-            echo "  Attempt ${i}: HTTP ${HTTP_STATUS}"
-            if [[ "${HTTP_STATUS}" == "200" ]]; then
-              echo "✅ Health check passed."
-              exit 0
-            fi
-            sleep 15
-          done
-          echo "❌ Health check failed after all retries."
-          exit 1
-
-      - name: Clean up SSH key
-        if: always()
-        run: rm -f ~/.ssh/deploy_key
+          echo "ℹ️  SSH deployment steps are commented out."
+          echo "    Add DEPLOY_SSH_KEY, DEPLOY_HOST, DEPLOY_USER secrets and"
+          echo "    uncomment the deploy steps in deploy.yml to go live."
+          echo ""
+          echo "    Backend image : ${{ env.BACKEND_IMAGE }}:${{ steps.tags.outputs.backend_tag }}"
+          echo "    Frontend image: ${{ env.FRONTEND_IMAGE }}:${{ steps.tags.outputs.frontend_tag }}"
