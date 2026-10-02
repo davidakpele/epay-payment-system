@@ -204,11 +204,16 @@ jobs:
 
       - name: Install Trivy
         run: |
-          TRIVY_VERSION="0.58.2"
-          curl -sL -o /tmp/trivy.tar.gz \
-            "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz"
-          tar xz -C /usr/local/bin -f /tmp/trivy.tar.gz trivy
-          rm /tmp/trivy.tar.gz
+          # Use apt-get — Trivy maintains an official Debian/Ubuntu repository.
+          # This is more reliable than downloading from GitHub releases directly.
+          sudo apt-get install -y wget apt-transport-https gnupg
+          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key \
+            | gpg --dearmor \
+            | sudo tee /usr/share/keyrings/trivy.gpg > /dev/null
+          echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb generic main" \
+            | sudo tee /etc/apt/sources.list.d/trivy.list
+          sudo apt-get update -qq
+          sudo apt-get install -y trivy
           trivy --version
 
       - name: Trivy scan — table (visibility)

@@ -474,11 +474,13 @@ pipeline {
                 script {
                     sh '''
                         if ! command -v trivy &>/dev/null; then
-                            TRIVY_VERSION="0.58.2"
-                            curl -sL -o /tmp/trivy.tar.gz \
-                                "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz"
-                            tar xz -C /usr/local/bin -f /tmp/trivy.tar.gz trivy
-                            rm /tmp/trivy.tar.gz
+                            apt-get install -y wget apt-transport-https gnupg 2>/dev/null || true
+                            wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key \
+                                | gpg --dearmor \
+                                | tee /usr/share/keyrings/trivy.gpg > /dev/null
+                            echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb generic main" \
+                                | tee /etc/apt/sources.list.d/trivy.list
+                            apt-get update -qq && apt-get install -y trivy
                         fi
                     '''
                     def images = [
