@@ -203,7 +203,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Trivy scan (table — visibility)
-        uses: aquasecurity/trivy-action@v0.49.0
+        uses: aquasecurity/trivy-action@0.31.0
         with:
           image-ref: scan-target/${{ matrix.image_suffix }}:latest
           format: table
@@ -211,13 +211,11 @@ jobs:
           exit-code: "0"
           ignore-unfixed: true
           trivyignores: .trivyignore
-          # Skip Java DB download — we scan OS packages only.
-          # Remove this flag if you want jar-level CVE detection.
           trivy-config: trivy-config.yaml
 
       - name: Run Trivy vulnerability scanner
         id: trivy-scan
-        uses: aquasecurity/trivy-action@v0.49.0
+        uses: aquasecurity/trivy-action@0.31.0
         with:
           image-ref: scan-target/${{ matrix.image_suffix }}:latest
           format: sarif
