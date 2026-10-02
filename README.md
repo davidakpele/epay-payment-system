@@ -20,6 +20,13 @@ A digital payments platform built with Spring Boot 4 and Next.js. ePay allows us
   - [Grafana](#grafana)
   - [Zipkin — Distributed Tracing](#zipkin--distributed-tracing)
   - [Loki + Promtail — Log Aggregation](#loki--promtail--log-aggregation)
+- [Testing](#testing)
+  - [Backend Testing](#backend-testing)
+  - [Frontend Testing](#frontend-testing)
+  - [Load & Performance Testing](#load--performance-testing)
+- [CI/CD Pipelines](#cicd-pipelines)
+  - [GitHub Actions](#github-actions)
+  - [Jenkins](#jenkins)
 - [Nginx Configuration](#nginx-configuration)
   - [HTTP Cache](#http-cache)
 - [Environment Variables](#environment-variables)
@@ -2022,7 +2029,356 @@ mvn clean:clean install
 
 ---
 
-## Roadmap
+## Testing
+
+ePay has a multi-layer test strategy covering backend unit and integration tests, frontend component and end-to-end tests, and load/performance tests against all key API endpoints.
+
+### Backend Testing
+
+| Tool | Version | Purpose |
+|---|---|---|
+| JUnit 5 + Mockito | via `spring-boot-starter-test` | Unit tests — fast, in-process, no I/O |
+| Spring Boot Test | via `spring-boot-starter-test` | `@SpringBootTest` slice tests with full context |
+| Testcontainers | 1.20.4 | Integration tests — real PostgreSQL and RabbitMQ containers |
+| RestAssured | 5.5.0 | Fluent HTTP API assertions for controller-layer tests |
+| WireMock | 3.9.1 | Stubs Paystack and Flutterwave HTTP calls in integration tests |
+| Awaitility | via Spring Boot BOM | Async condition polling (e.g. wait for RabbitMQ message processing) |
+| JaCoCo | 0.8.12 | Code coverage — HTML + XML reports, 60% line coverage threshold |
+| Spring REST Docs | 3.0.1 | Auto-generates API documentation snippets from MockMvc tests |
+
+**Running tests:**
+
+```bash
+# Unit tests only (fast — no Docker required)
+cd epay
+./mvnw test
+
+# Unit tests + JaCoCo coverage report
+./mvnw verify -P coverage
+
+# Integration tests (requires Docker for Testcontainers)
+./mvnw verify -P integration-test
+
+# Both profiles
+./mvnw verify -P coverage,integration-test
+```
+
+Coverage reports are generated at `target/site/jacoco/index.html` inside each module.
+
+**Test naming conventions:**
+
+| Pattern | Type | Runner |
+|---|---|---|
+| `*Test.java` | Unit test | Surefire (runs with `mvn test`) |
+| `*IT.java` | Integration test | Failsafe (runs with `mvn verify -P integration-test`) |
+| `*IntegrationTest.java` | Integration test | Failsafe |
+
+**Testcontainers configuration:**
+
+Integration tests annotated with `@Testcontainers` spin up a real `postgres:16-alpine` container (mapped to a random port) and a `rabbitmq:3.13-management-alpine` container per test class. Spring Boot's `@DynamicPropertySource` wires the container URLs into the application context automatically. No pre-installed database is needed.
+
+---
+
+### Frontend Testing
+
+| Tool | Version | Purpose |
+|---|---|---|
+| Vitest | 2.1.8 | Fast unit test runner with native ESM and TypeScript support |
+| @testing-library/react | 16.1.0 | Component rendering and DOM assertion utilities |
+| @testing-library/user-event | 14.5.2 | Simulates real user interactions (click, type, tab) |
+| @testing-library/jest-dom | 6.6.3 | Custom DOM matchers (`toBeInTheDocument`, `toHaveValue`, etc.) |
+| @vitest/coverage-v8 | 2.1.8 | V8-based code coverage with lcov/HTML output |
+| Playwright | 1.49.0 | End-to-end tests across Chromium, Firefox, and mobile viewports |
+| jsdom | 25.0.1 | DOM simulation environment for Vitest |
+
+**Running tests:**
+
+```bash
+cd frontend
+npm install
+
+# Unit tests (single run)
+npm run test
+
+# Unit tests in watch mode (development)
+npm run test:watch
+
+# Unit tests with coverage report
+npm run test:coverage
+
+# E2E tests (requires the Next.js app to be running)
+npm run test:e2e
+
+# E2E tests with interactive UI
+npm run test:e2e:ui
+
+# View last E2E HTML report
+npm run test:e2e:report
+```
+
+**Test file locations:**
+
+| Path | Type | What it tests |
+|---|---|---|
+| `frontend/__tests__/` | Vitest unit tests | Utility functions, helpers, pure logic |
+| `frontend/**/*.test.ts(x)` | Vitest unit tests | Component-level tests co-located with source |
+| `frontend/e2e/auth/` | Playwright E2E | Login, registration, auth redirect flows |
+| `frontend/e2e/payment/` | Playwright E2E | Transfer, dashboard, and payment journey |
+
+**Coverage thresholds** (enforced in `vitest.config.ts`):
+
+| Metric | Threshold |
+|---|---|
+| Lines | 60% |
+| Functions | 60% |
+| Branches | 50% |
+| Statements | 60% |
+
+**Playwright configuration** (`playwright.config.ts`):
+
+- Runs against `BASE_URL` (defaults to `http://localhost:3000`)
+- Test projects: `chromium`, `firefox`, `mobile-chrome` (Pixel 5 viewport)
+- Screenshots and videos captured on failure only
+- In CI: 2 retries, 2 parallel workers
+- Locally: auto-starts `npm run dev` via `webServer`
+
+---
+
+### Load & Performance Testing
+
+Load tests are written with [k6](https://k6.io) and live in the `k6/` directory.
+
+| Script | VUs | Duration | Purpose |
+|---|---|---|---|
+| `k6/smoke.js` | 1 | 1 iteration | Verify the API is alive — runs in every CI push |
+| `k6/load.js` | 50 | 10 min (ramp + hold + ramp-down) | Realistic steady-state load across auth, wallet, deposit, beneficiary |
+| `k6/stress.js` | up to 150 | 10 min | Find the breaking point — gradually overwhelm the API |
+| `k6/spike.js` | up to 200 | ~3 min | Simulate a sudden burst (promotion event) and test recovery |
+
+**Install k6:**
+
+```bash
+# macOS
+brew install k6
+
+# Linux (Debian/Ubuntu)
+sudo apt-get install -y gnupg wget
+wget -qO - https://dl.k6.io/key.gpg | sudo gpg --dearmor -o /usr/share/keyrings/k6-archive-keyring.gpg
+echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+sudo apt-get update && sudo apt-get install k6
+
+# Windows
+winget install k6 --source winget
+```
+
+**Run tests:**
+
+```bash
+# Smoke (fastest)
+k6 run k6/smoke.js
+
+# Load against local stack
+k6 run k6/load.js
+
+# Load against staging (with auth credentials)
+k6 run \
+  -e BASE_URL=https://staging-api.epay.com \
+  -e TEST_USER_EMAIL=loadtest@epay.test \
+  -e TEST_USER_PASS=LoadTest@123 \
+  k6/load.js
+
+# Stream results to Grafana (requires InfluxDB)
+k6 run --out influxdb=http://localhost:8086/k6 k6/load.js
+```
+
+**Performance thresholds** (configured per script):
+
+| Metric | `smoke.js` | `load.js` | `stress.js` |
+|---|---|---|---|
+| `http_req_duration` p95 | < 3 s | < 2 s | < 5 s |
+| `http_req_failed` rate | < 1% | < 2% | < 10% |
+| `login_success_rate` | — | > 95% | — |
+
+> Never run stress or spike tests against production. Target a staging environment only.
+
+---
+
+## CI/CD Pipelines
+
+The project has two parallel CI/CD systems: **GitHub Actions** (cloud) and **Jenkins** (self-hosted). Both implement identical stages and share the same Docker images from GHCR.
+
+### GitHub Actions
+
+Four workflow files live in `.github/workflows/`:
+
+| File | Trigger | What it does |
+|---|---|---|
+| `backend-ci.yml` | Push/PR to `epay/**` | Unit tests + JaCoCo → Integration tests (Testcontainers) → k6 smoke → Docker build & push |
+| `frontend-ci.yml` | Push/PR to `frontend/**` | Lint + type-check → Vitest unit tests → Next.js build → Playwright E2E → Docker build & push |
+| `security-scan.yml` | Push, PR, weekly schedule | OWASP Dependency-Check → npm audit → CodeQL (Java + JS) → Trivy image scan |
+| `deploy.yml` | After Backend CI or Frontend CI completes on `main` | Rolling restart of all instances on the production server (SSH — commented until hosted) |
+
+**Pipeline flow for a push to `main`:**
+
+```
+push to main
+    │
+    ├─► Backend CI
+    │     ├─ Unit Tests & Coverage  (JUnit + JaCoCo)
+    │     ├─ Build JAR
+    │     ├─ Integration Tests      (Testcontainers)
+    │     ├─ k6 Smoke Test
+    │     └─ Docker Build & Push    → ghcr.io/.../epay-server:main-<sha>
+    │
+    ├─► Frontend CI
+    │     ├─ Lint & Type Check
+    │     ├─ Vitest Unit Tests      (with coverage)
+    │     ├─ Build Next.js
+    │     ├─ Playwright E2E
+    │     └─ Docker Build & Push    → ghcr.io/.../epay-frontend:main-<sha>
+    │
+    ├─► Security Scan               (runs in parallel)
+    │     ├─ OWASP Dependency-Check
+    │     ├─ npm Audit
+    │     ├─ CodeQL Analysis        (Java + JavaScript)
+    │     └─ Trivy Image Scan       (CRITICAL/HIGH, results archived as SARIF)
+    │
+    └─► Deploy to Production        (after both CI workflows succeed)
+          └─ SSH rolling restart    (commented out until app is hosted)
+```
+
+**Image tagging strategy:**
+
+| Tag | When | Example |
+|---|---|---|
+| `main-<sha>` | Every push to `main` | `epay-server:main-a1b2c3d` |
+| `develop-<sha>` | Every push to `develop` | `epay-server:develop-a1b2c3d` |
+| `latest` | Pushes to `main` only | `epay-server:latest` |
+
+**Security scan schedule:**
+
+In addition to running on every push and PR, `security-scan.yml` has a weekly cron trigger every Monday at 08:00 UTC to catch newly disclosed CVEs in existing images.
+
+---
+
+### Jenkins
+
+A full declarative `Jenkinsfile` at the project root mirrors all GitHub Actions stages. Use it with a **Multibranch Pipeline** job to get automatic branch and PR discovery.
+
+**Required Jenkins setup** (see `jenkins/README.md` for full instructions):
+
+| Item | Value |
+|---|---|
+| JDK tool | `JDK21` — Temurin 21 |
+| Node.js tool | `Node24` — 24.11.1 |
+| Credential: `GHCR_USERNAME` | Secret text — GitHub username/org |
+| Credential: `GHCR_TOKEN` | Secret text — GitHub PAT with `packages:write` |
+| Credential: `NVD_API_KEY` | Secret text — NVD API key for OWASP DC |
+| Credential: `DEPLOY_SSH_KEY` | SSH private key — production server |
+| Credential: `DEPLOY_HOST` | Secret text — production server IP/hostname |
+| Credential: `DEPLOY_USER` | Secret text — SSH user on production server |
+
+**Jenkins pipeline stages:**
+
+```
+Initialise
+    │
+    ├─ Backend — Unit Tests & Coverage
+    ├─ Backend — Build JAR
+    ├─ Backend — Integration Tests
+    ├─ Backend — k6 Smoke Test
+    ├─ Backend — k6 Load Test         (gated behind RUN_LOAD_TESTS parameter)
+    ├─ Backend — Docker Build & Push
+    │
+    ├─ Frontend — Lint & Type Check
+    ├─ Frontend — Vitest Unit Tests
+    ├─ Frontend — Build
+    ├─ Frontend — Playwright E2E      (gated behind RUN_E2E parameter)
+    ├─ Frontend — Docker Build & Push
+    │
+    ├─ Security — OWASP Dependency Check
+    ├─ Security — npm Audit
+    ├─ Security — Trivy Image Scan
+    │
+    └─ Deploy — Production            (main branch only, SSH commented until hosted)
+```
+
+**Build parameters:**
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `BACKEND_TAG` | String | `latest` | Override backend image tag to deploy |
+| `FRONTEND_TAG` | String | `latest` | Override frontend image tag to deploy |
+| `SKIP_HEALTH_CHECK` | Boolean | `false` | Skip post-deploy health check |
+| `SKIP_SECURITY_SCAN` | Boolean | `false` | Skip OWASP/npm/Trivy (speeds up dev branch builds) |
+| `RUN_LOAD_TESTS` | Boolean | `false` | Run k6 load test (50 VUs) — staging only |
+| `RUN_E2E` | Boolean | `true` | Run Playwright E2E tests |
+
+**Published reports** (visible in Jenkins build sidebar):
+
+| Report | Plugin |
+|---|---|
+| JUnit test results (Surefire + Failsafe + Playwright) | JUnit |
+| JaCoCo coverage — `JaCoCo Coverage Report` | HTML Publisher |
+| Vitest coverage — `Vitest Coverage Report` | HTML Publisher |
+| Playwright E2E — `Playwright E2E Report` | HTML Publisher |
+| OWASP Dependency-Check — `OWASP Dependency Check` | HTML Publisher |
+| Trivy SARIF files | Archived artifacts |
+
+---
+
+## Monitoring Stack
+
+| Service | URL | Purpose |
+|---|---|---|
+| Prometheus | http://localhost:9090 | Scrapes all targets every 15 s, 15-day retention |
+| Grafana | http://localhost:3010 | Dashboards — credentials: `admin / admin` |
+| Alertmanager | http://localhost:9093 | Routes Prometheus alerts to email / Slack |
+| Zipkin | http://localhost:9411 | Distributed traces |
+| Loki | http://localhost:3100 | Log aggregation (queried via Grafana) |
+| cAdvisor | http://localhost:8081 | Per-container CPU, memory, network, disk metrics |
+| postgres-exporter | http://localhost:9187 | PostgreSQL → Prometheus |
+| redis-exporter | http://localhost:9121 | Redis → Prometheus |
+| nginx-exporter | http://localhost:9113 | Nginx stub_status → Prometheus |
+
+### Alertmanager
+
+Alertmanager receives all alerts defined in `epay/monitoring/prometheus/alert.rules.yml` and routes them by severity and service:
+
+| Route | Receiver | Repeat Interval |
+|---|---|---|
+| `severity: critical` | `email-critical` (on-call address) | 1 hour |
+| `service: payment\|wallet\|deposit\|...` | `email-payments` (payments team) | 2 hours |
+| `severity: warning` (default) | `email-team` (dev team) | 6 hours |
+
+Configure the following environment variables in `.env` to activate email delivery:
+
+```env
+SMTP_HOST=smtp.gmail.com
+GMAIL_USERNAME=your@gmail.com
+GMAIL_APP_PASSWORD=your_gmail_app_password
+ALERT_FROM_EMAIL=alerts@epay.app
+ALERT_EMAIL_TEAM=team@epay.app
+ALERT_EMAIL_CRITICAL=oncall@epay.app
+ALERT_EMAIL_PAYMENTS=payments-team@epay.app
+
+# Optional — uncomment the Slack receiver in alertmanager.yml to use
+SLACK_WEBHOOK_URL=https://hooks.slack.com/services/xxx
+```
+
+### cAdvisor
+
+cAdvisor (`gcr.io/cadvisor/cadvisor:v0.49.1`) runs alongside the application and exposes per-container resource metrics scraped by Prometheus every 30 seconds. It provides:
+
+- CPU usage per container (user + system time)
+- Memory usage (RSS, cache, working set)
+- Network I/O (bytes and packets in/out)
+- Disk I/O (reads and writes per container)
+- Container restart count
+
+These metrics power container-level panels in Grafana and feed the `BackendHighCPU` and `BackendHighMemory` alert rules.
+
+---
 
 | Feature                                                  | Status      |
 | -------------------------------------------------------- | ----------- |
@@ -2052,6 +2408,12 @@ mvn clean:clean install
 | **Load-balanced multi-instance deployment (3 replicas)** | **Done**    |
 | **Nginx load balancer + exporters**                      | **Done**    |
 | **@Operation Swagger docs on all endpoints**             | **Done**    |
+| **Backend testing (JUnit 5, Testcontainers, RestAssured, JaCoCo)** | **Done** |
+| **Frontend testing (Vitest, Testing Library, Playwright)** | **Done**  |
+| **k6 load / stress / spike tests**                       | **Done**    |
+| **Alertmanager (email + Slack routing)**                 | **Done**    |
+| **cAdvisor container metrics**                           | **Done**    |
+| **Jenkins declarative pipeline**                         | **Done**    |
 
 ---
 
