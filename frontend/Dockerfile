@@ -4,15 +4,15 @@
 FROM node:24.20.0-alpine3.24 AS deps
 RUN apk upgrade --no-cache
 WORKDIR /app
-COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
+COPY package.json ./
+RUN npm install --omit=dev
 
 # ── Stage 2: Build ────────────────────────────────────────────────────────
 FROM node:24.20.0-alpine3.24 AS builder
 RUN apk upgrade --no-cache
 WORKDIR /app
-COPY package.json package-lock.json ./
-RUN npm ci
+COPY package.json ./
+RUN npm install
 COPY . .
 RUN npm run build
 
