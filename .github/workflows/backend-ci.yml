@@ -1,5 +1,4 @@
 name: Backend CI
-# re-trigger: k6 smoke test fix — tagged thresholds
 
 on:
   push:
