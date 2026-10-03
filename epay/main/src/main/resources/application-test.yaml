@@ -19,3 +19,14 @@ management:
     mail:
       # Disable mail health check — SMTP is not available in CI.
       enabled: false
+
+# Third-party API credentials are not available in CI.
+# Provide empty-string defaults so the app context boots without these env vars.
+twilio:
+  account-sid: ${TWILIO_ACCOUNT_SID:}
+  auth-token: ${TWILIO_AUTH_TOKEN:}
+  whatsapp-number: ${TWILIO_WHATSAPP_NUMBER:}
+
+flutterwave:
+  public-key: ${FLUTTERWAVE_PUBLIC_KEY:}
+  secret-key: ${FLUTTERWAVE_SECRET_KEY:}
