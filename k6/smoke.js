@@ -18,25 +18,31 @@ export const options = {
   iterations: 1,
   thresholds: {
     http_req_duration: ['p(95)<3000'],
-    http_req_failed:   ['rate<0.01'],
+    // Strict failure threshold applies only to requests tagged 'critical'.
+    // The login probe is intentionally excluded — it sends invalid creds
+    // and always returns a 4xx, which k6 counts as http_req_failed.
+    'http_req_failed{tag:critical}': ['rate<0.01'],
   },
 }
 
 export default function () {
-  const health = http.get(`${BASE_URL}/actuator/health`)
+  const health = http.get(`${BASE_URL}/actuator/health`, { tags: { tag: 'critical' } })
   check(health, {
     'health — status 200':   (r) => r.status === 200,
     'health — status UP':    (r) => r.json('status') === 'UP',
   })
 
   sleep(0.5)
-  const info = http.get(`${BASE_URL}/actuator/info`)
+  const info = http.get(`${BASE_URL}/actuator/info`, { tags: { tag: 'critical' } })
   check(info, {
     'info — status 200 or 404': (r) => [200, 404].includes(r.status),
   })
 
   sleep(0.5)
 
+  // Login probe: intentionally sends invalid credentials to verify the
+  // endpoint is reachable and returns a client error (not a 5xx crash).
+  // Not tagged 'critical' so it doesn't affect the strict failure threshold.
   const loginProbe = http.post(
     `${BASE_URL}/api/v1/auth/login`,
     JSON.stringify({ email: '', password: '' }),
