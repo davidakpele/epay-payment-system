@@ -274,6 +274,12 @@ management:
   health:
     mail:
       enabled: false
+    # Disable the reactive Redis health indicator — the imperative one
+    # (redis) already covers connectivity. The reactive indicator uses a
+    # separate Lettuce connection factory that resolves the hostname at
+    # bean-creation time, before property overrides are fully applied.
+    data-redis:
+      enabled: false
   metrics:
     tags:
       application: ${spring.application.name}
@@ -312,13 +318,3 @@ logging:
     org.hibernate.type.descriptor.sql.BasicBinder: WARN
     zipkin2.reporter: WARN
     io.micrometer.tracing: WARN
-
-management:
-  health:
-    # Disable the reactive Redis health indicator — the imperative one
-    # (redis) already covers connectivity. The reactive indicator creates a
-    # separate Lettuce connection factory that can fail to resolve the
-    # hostname if the reactive stack initialises before the property
-    # environment is fully set up.
-    data-redis:
-      enabled: false
