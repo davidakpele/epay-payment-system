@@ -20,4 +20,11 @@ VOLUME /tmp
 # The build context is ./epay, so the path below is relative to that root.
 COPY main/target/epay-server.jar app.jar
 
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["java", \
+  "-XX:TieredStopAtLevel=1", \
+  "-Xss512k", \
+  "-XX:+UseContainerSupport", \
+  "-XX:MaxRAMPercentage=75.0", \
+  "-Dspring.jmx.enabled=false", \
+  "-Dfile.encoding=UTF-8", \
+  "-jar", "app.jar"]
