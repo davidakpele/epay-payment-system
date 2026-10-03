@@ -139,6 +139,8 @@ jobs:
           POSTGRES_DB:       epay
           POSTGRES_USER:     epay
           POSTGRES_PASSWORD: epay
+        ports:
+          - 5432:5432
         options: >-
           --health-cmd "pg_isready -U epay -d epay"
           --health-interval 10s
@@ -146,6 +148,8 @@ jobs:
           --health-retries 5
       redis:
         image: redis:7-alpine
+        ports:
+          - 6379:6379
         options: >-
           --health-cmd "redis-cli ping"
           --health-interval 10s

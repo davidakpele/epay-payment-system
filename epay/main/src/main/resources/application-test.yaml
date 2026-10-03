@@ -8,3 +8,14 @@ logging:
   # app starts successfully on any runner without needing sudo mkdir.
   file:
     path: ${java.io.tmpdir}/epay-logs
+
+management:
+  tracing:
+    # Disable Zipkin export in test/CI — zipkin:9411 is not available on the runner.
+    export:
+      zipkin:
+        enabled: false
+  health:
+    mail:
+      # Disable mail health check — SMTP is not available in CI.
+      enabled: false
