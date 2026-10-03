@@ -5,7 +5,11 @@
   <springProperty scope="context" name="appName"  source="spring.application.name" defaultValue="epay-server"/>
   <springProperty scope="context" name="logLevel" source="logging.level.root"       defaultValue="INFO"/>
 
-  <property name="LOG_DIR"        value="/var/log/epay"/>
+  <!-- LOG_DIR: read from Spring's standard logging.file.path property.
+       Defaults to ./logs (always writable) so the app starts anywhere.
+       Production sets this to /var/log/epay via application.yaml.
+       The test profile overrides it to a temp dir via application-test.yaml. -->
+  <springProperty scope="context" name="LOG_DIR" source="logging.file.path" defaultValue="./logs"/>
   <property name="AUDIT_LOG_FILE" value="${LOG_DIR}/audit.log"/>
   <property name="APP_LOG_FILE"   value="${LOG_DIR}/app.log"/>
 

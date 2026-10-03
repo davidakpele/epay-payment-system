@@ -1,0 +1,10 @@
+# ── Test / CI profile ────────────────────────────────────────────────────────
+# Activated by --spring.profiles.active=test (used in k6 smoke test CI job).
+# Overrides production defaults that require infrastructure not available on
+# a bare GitHub Actions runner.
+
+logging:
+  # Write log files to the system temp dir instead of /var/log/epay so the
+  # app starts successfully on any runner without needing sudo mkdir.
+  file:
+    path: ${java.io.tmpdir}/epay-logs

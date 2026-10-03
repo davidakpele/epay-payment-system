@@ -297,6 +297,8 @@ management:
 # before the logger name on every log line that is part of a trace.
 logging:
   include-application-name: false
+  file:
+    path: /var/log/epay
   pattern:
     correlation: "[${spring.application.name:},%X{traceId:-},%X{spanId:-}] "
     console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"

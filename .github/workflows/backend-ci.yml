@@ -169,6 +169,9 @@ jobs:
           name: epay-server-jar
           path: epay/main/target/
 
+      - name: Create log directory
+        run: sudo mkdir -p /var/log/epay && sudo chmod 777 /var/log/epay
+
       - name: Start application
         working-directory: epay
         run: |
