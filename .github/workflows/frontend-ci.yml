@@ -185,6 +185,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Regenerate package-lock.json
+        working-directory: frontend
+        run: npm install --package-lock-only
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 

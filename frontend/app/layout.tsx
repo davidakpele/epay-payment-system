@@ -1,18 +1,14 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+// Use the self-hosted geist package instead of next/font/google so the build
+// does not need to reach fonts.googleapis.com (fails in network-restricted CI).
+import { GeistSans } from "geist/font/sans";
+import { GeistMono } from "geist/font/mono";
 import "@fortawesome/fontawesome-free/css/all.min.css";
 import "./globals.css";
 import CookieMigration from "./components/CookieMigration";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+const geistSans = GeistSans;
+const geistMono = GeistMono;
 
 export const metadata: Metadata = {
   title: "ePay Online Wallet",

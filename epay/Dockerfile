@@ -9,7 +9,9 @@ FROM eclipse-temurin:21-jdk-alpine AS runtime
 WORKDIR /app
 
 RUN mkdir -p /var/www/uploads/images && \
-    chmod -R 755 /var/www/uploads/images
+    chmod -R 755 /var/www/uploads/images && \
+    mkdir -p /var/log/epay && \
+    chmod -R 755 /var/log/epay
 
 VOLUME /tmp
 
