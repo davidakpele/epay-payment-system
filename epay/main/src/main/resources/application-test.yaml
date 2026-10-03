@@ -30,3 +30,12 @@ twilio:
 flutterwave:
   public-key: ${FLUTTERWAVE_PUBLIC_KEY:}
   secret-key: ${FLUTTERWAVE_SECRET_KEY:}
+
+spring:
+  rabbitmq:
+    # In CI the broker runs as a service container on localhost.
+    # The base config points to 'rabbitmq' (Docker network hostname).
+    host: ${SPRING_RABBITMQ_HOST:localhost}
+  health:
+    rabbit:
+      enabled: false

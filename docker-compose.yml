@@ -155,7 +155,7 @@ services:
       context: ./epay
       dockerfile: Dockerfile
     image: epay-server:latest
-    environment:
+    environment: &server-base-env
       SPRING_PROFILES_ACTIVE: prod
       DB_USERNAME: ${DB_USERNAME:-epay}
       DB_PASSWORD: ${DB_PASSWORD:-epay}
@@ -170,8 +170,12 @@ services:
       SERVER_PORT: 8029
       PAYSTACK_SECRET_KEY: ${PAYSTACK_SECRET_KEY:-}
       FLUTTERWAVE_SECRET_KEY: ${FLUTTERWAVE_SECRET_KEY:-}
+      FLUTTERWAVE_PUBLIC_KEY: ${FLUTTERWAVE_PUBLIC_KEY:-}
       GMAIL_APP_PASSWORD: ${GMAIL_APP_PASSWORD:-}
       GMAIL_USERNAME: ${GMAIL_USERNAME:-}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+      TWILIO_WHATSAPP_NUMBER: ${TWILIO_WHATSAPP_NUMBER:-}
       INSTANCE_ID: ${HOSTNAME:-unknown}
       SPRING_DATASOURCE_HIKARI_MAXIMUM-POOL-SIZE: 10
       SPRING_DATASOURCE_HIKARI_MINIMUM-IDLE: 5
@@ -222,6 +226,7 @@ services:
     ports:
       - "8021:8029"
     environment:
+      <<: *server-base-env
       INSTANCE_ID: epay-server-1
 
   epay-server-2:
@@ -230,6 +235,7 @@ services:
     ports:
       - "8022:8029"
     environment:
+      <<: *server-base-env
       INSTANCE_ID: epay-server-2
 
   epay-server-3:
@@ -238,6 +244,7 @@ services:
     ports:
       - "8023:8029"
     environment:
+      <<: *server-base-env
       INSTANCE_ID: epay-server-3
 
   # Backend Instance 4 (Optional - for high load)
