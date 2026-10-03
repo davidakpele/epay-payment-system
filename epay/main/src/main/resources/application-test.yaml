@@ -36,6 +36,13 @@ spring:
     # In CI the broker runs as a service container on localhost.
     # The base config points to 'rabbitmq' (Docker network hostname).
     host: ${SPRING_RABBITMQ_HOST:localhost}
+  data:
+    redis:
+      # In CI Redis runs as a service container on localhost.
+      # The base config points to 'redis' (Docker network hostname).
+      # spring.data.redis.host is what Spring Boot 4.x Lettuce reads for
+      # both the imperative and reactive connection factories.
+      host: ${REDIS_HOST:localhost}
   health:
     rabbit:
       enabled: false

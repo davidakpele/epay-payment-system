@@ -194,7 +194,7 @@ jobs:
             --spring.datasource.url=jdbc:postgresql://localhost:5432/epay \
             --spring.datasource.username=epay \
             --spring.datasource.password=epay \
-            --spring.redis.host=localhost \
+            --spring.data.redis.host=localhost \
             --spring.rabbitmq.host=localhost \
             --server.port=8029 &
           # Wait until actuator/health returns UP
