@@ -147,24 +147,12 @@ jobs:
           name: nextjs-build
           path: frontend/
 
-      - name: Start Next.js server
-        working-directory: frontend
-        run: npx next start --port 3000 &
-        env:
-          NODE_ENV: production
-          NEXT_PUBLIC_API_URL: "http://localhost:8029"
-
-      - name: Wait for Next.js to be ready
+      - name: Prepare standalone server
+        # The standalone output needs .next/static and public/ copied
+        # alongside server.js so the server can serve static assets.
         run: |
-          echo "Waiting for Next.js on port 3000..."
-          for i in $(seq 1 30); do
-            if curl -sf http://localhost:3000 > /dev/null 2>&1; then
-              echo "Next.js is ready after ${i}s"
-              break
-            fi
-            [ "$i" = "30" ] && { echo "Next.js failed to start"; exit 1; }
-            sleep 2
-          done
+          cp -r frontend/.next/static frontend/.next/standalone/.next/static
+          cp -r frontend/public frontend/.next/standalone/public
 
       - name: Run Playwright E2E tests
         working-directory: frontend

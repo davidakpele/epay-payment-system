@@ -45,14 +45,20 @@ export default defineConfig({
     },
   ],
 
-  // Automatically start the Next.js dev server when running locally.
-  // In CI the app is expected to already be running (set BASE_URL).
-  webServer: process.env.CI
-    ? undefined
-    : {
-        command: 'npm run dev',
-        url: 'http://localhost:3000',
-        reuseExistingServer: true,
-        timeout: 120_000,
-      },
+  // In CI: start the already-built Next.js server automatically.
+  // The build artifact (.next/) is downloaded before tests run.
+  // Outside CI: start the dev server automatically.
+  webServer: {
+    command: process.env.CI
+      ? 'node .next/standalone/server.js'
+      : 'npm run dev',
+    url: 'http://localhost:3000',
+    reuseExistingServer: !process.env.CI,
+    timeout: 120_000,
+    env: {
+      PORT: '3000',
+      HOSTNAME: '0.0.0.0',
+      NODE_ENV: 'production',
+    },
+  },
 })
