@@ -148,11 +148,18 @@ jobs:
           path: frontend/
 
       - name: Prepare standalone server
-        # The standalone output needs .next/static and public/ copied
-        # alongside server.js so the server can serve static assets.
+        # Copy static assets next to the standalone server.js so Next.js
+        # can serve them. Uses cp -r with trailing /. to copy contents only.
         run: |
-          cp -r frontend/.next/static frontend/.next/standalone/.next/static
-          cp -r frontend/public frontend/.next/standalone/public
+          STANDALONE="frontend/.next/standalone"
+          if [ ! -d "$STANDALONE" ]; then
+            echo "Standalone dir not found — rebuilding..."
+            cd frontend && npm run build && cd ..
+          fi
+          mkdir -p "$STANDALONE/.next/static"
+          cp -r frontend/.next/static/. "$STANDALONE/.next/static/"
+          mkdir -p "$STANDALONE/public"
+          [ -d frontend/public ] && cp -r frontend/public/. "$STANDALONE/public/" || true
 
       - name: Run Playwright E2E tests
         working-directory: frontend
