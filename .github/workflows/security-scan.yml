@@ -39,8 +39,6 @@ jobs:
 
       - name: Run OWASP Dependency-Check via Maven plugin
         working-directory: epay
-        # Fail on CVSS >= 7 (HIGH / CRITICAL). NVD_API_KEY is optional but
-        # strongly recommended to avoid rate-limiting on the NVD data feed.
         run: |
           ./mvnw -B --no-transfer-progress \
             org.owasp:dependency-check-maven:check \
@@ -140,15 +138,11 @@ jobs:
         continue-on-error: true
         with:
           category: "/language:${{ matrix.language }}"
-          # upload requires Code Scanning to be enabled in repo Settings → Security.
-          # Set to false to keep the workflow green on repos where it is not enabled.
           upload: false
 
-  # ── 4. Trivy container image scan ─────────────────────────────────────────
   trivy-image-scan:
     name: Trivy Image Scan
     runs-on: ubuntu-latest
-    # Only scan images that were just built (push events) or on schedule
     if: >
       github.event_name == 'push' ||
       github.event_name == 'schedule' ||
@@ -170,8 +164,7 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      # ── Backend only: build the fat-jar so Docker COPY can find it ─────
+        
       - name: Set up JDK 21 (backend image only)
         if: matrix.needs_maven
         uses: actions/setup-java@v4

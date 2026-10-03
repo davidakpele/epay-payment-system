@@ -1,0 +1,36 @@
+# Maven build outputs — only main/target/epay-server.jar is needed
+# (copied explicitly in the Dockerfile)
+**/target/
+!main/target/epay-server.jar
+
+# IDE / editor
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Logs
+*.log
+
+# Local env
+.env
+.env.*
+
+# Test reports
+**/surefire-reports/
+**/failsafe-reports/
+**/jacoco/
+
+# Apt generated (MapStruct)
+**/.apt_generated/
+**/.apt_generated_tests/

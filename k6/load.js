@@ -24,18 +24,16 @@ import { check, group, sleep } from 'k6'
 import { Counter, Rate, Trend } from 'k6/metrics'
 import { BASE_URL, JSON_HEADERS, authHeaders } from './config.js'
 
-// ── Custom metrics ─────────────────────────────────────────────────────────
 const loginSuccessRate   = new Rate('login_success_rate')
 const walletFetchTrend   = new Trend('wallet_fetch_duration')
 const depositErrorCount  = new Counter('deposit_errors')
 const transferErrorCount = new Counter('transfer_errors')
 
-// ── Options ────────────────────────────────────────────────────────────────
 export const options = {
   stages: [
-    { duration: '3m',  target: 50  },  // ramp up
-    { duration: '5m',  target: 50  },  // steady load
-    { duration: '2m',  target: 0   },  // ramp down
+    { duration: '3m',  target: 50  },
+    { duration: '5m',  target: 50  }, 
+    { duration: '2m',  target: 0   }, 
   ],
   thresholds: {
     http_req_duration:    ['p(95)<2000', 'p(99)<4000'],
@@ -45,7 +43,6 @@ export const options = {
   },
 }
 
-// ── Auth helper ────────────────────────────────────────────────────────────
 function login() {
   const email    = __ENV.TEST_USER_EMAIL || 'loadtest@epay.test'
   const password = __ENV.TEST_USER_PASS  || 'LoadTest@123'
@@ -66,7 +63,6 @@ function login() {
   return ok ? res.json('data.token') : null
 }
 
-// ── Main scenario ──────────────────────────────────────────────────────────
 export default function () {
   const token = login()
   if (!token) {
@@ -76,7 +72,6 @@ export default function () {
 
   const headers = authHeaders(token)
 
-  // ── Wallet balance ───────────────────────────────────────────────────────
   group('Wallet', () => {
     const start = Date.now()
     const res = http.get(`${BASE_URL}/api/v1/wallet/balance`, { headers })
@@ -90,7 +85,6 @@ export default function () {
 
   sleep(1)
 
-  // ── Transaction history ──────────────────────────────────────────────────
   group('Transaction History', () => {
     const res = http.get(
       `${BASE_URL}/api/v1/history/transactions?page=0&size=10`,
@@ -104,7 +98,6 @@ export default function () {
 
   sleep(1)
 
-  // ── Deposit (initiation only — no real money moved) ──────────────────────
   group('Deposit Init', () => {
     const res = http.post(
       `${BASE_URL}/api/v1/deposit/initiate`,
@@ -122,7 +115,6 @@ export default function () {
 
   sleep(1)
 
-  // ── Beneficiary list ─────────────────────────────────────────────────────
   group('Beneficiaries', () => {
     const res = http.get(`${BASE_URL}/api/v1/beneficiary`, { headers })
     check(res, {
@@ -130,5 +122,5 @@ export default function () {
     })
   })
 
-  sleep(Math.random() * 2 + 1)  // 1–3 s think time between iterations
+  sleep(Math.random() * 2 + 1) 
 }

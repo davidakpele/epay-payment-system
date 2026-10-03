@@ -1,18 +1,12 @@
 # Trivy scan configuration
-# Docs: https://trivy.dev/latest/docs/references/configuration/config-file/
-
 scan:
-  # Scan OS packages and language-specific packages (no Java DB needed for OS scanning)
   scanners:
     - vuln
     - secret
 
 vulnerability:
-  # Only report vulnerabilities that have a fix available
   ignore-unfixed: true
-  # Skip downloading the Java DB (avoids mirror.gcr.io 404 errors with older Trivy versions)
-  # Remove this if you want jar-level CVE detection with a current Trivy version
   skip-java-db-update: true
 
 db:
-  skip-update: false  # Always use latest vuln DB
+  skip-update: false

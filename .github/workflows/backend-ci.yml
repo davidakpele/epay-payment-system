@@ -18,9 +18,7 @@ env:
   JAVA_VERSION: "21"
 
 jobs:
-  # ════════════════════════════════════════════════════════════════════════
-  #  Unit tests + JaCoCo coverage
-  # ════════════════════════════════════════════════════════════════════════
+
   unit-test:
     name: Unit Tests & Coverage (Java 21)
     runs-on: ubuntu-latest
@@ -82,10 +80,6 @@ jobs:
           path: epay/main/target/epay-server.jar
           retention-days: 1
 
-  # ════════════════════════════════════════════════════════════════════════
-  #  Integration tests (Testcontainers — needs Docker)
-  #  Runs on push to main/develop; skipped on PRs to keep feedback fast
-  # ════════════════════════════════════════════════════════════════════════
   integration-test:
     name: Integration Tests (Testcontainers)
     runs-on: ubuntu-latest
@@ -131,10 +125,7 @@ jobs:
           path: epay/**/target/failsafe-reports/
           retention-days: 7
 
-  # ════════════════════════════════════════════════════════════════════════
-  #  k6 smoke test against the built JAR
-  #  Quick API sanity check — runs the smoke script (1 VU, 1 iteration)
-  # ════════════════════════════════════════════════════════════════════════
+
   k6-smoke:
     name: k6 Smoke Test
     runs-on: ubuntu-latest
@@ -207,9 +198,6 @@ jobs:
       - name: Run k6 smoke test
         run: k6 run -e BASE_URL=http://localhost:8029 k6/smoke.js
 
-  # ════════════════════════════════════════════════════════════════════════
-  #  Docker build & push (only on push, after tests pass)
-  # ════════════════════════════════════════════════════════════════════════
   docker-build:
     name: Build & Push Docker Image
     runs-on: ubuntu-latest

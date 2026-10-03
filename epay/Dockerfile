@@ -1,5 +1,3 @@
-# syntax=docker/dockerfile:1
-
 # ── Stage 1: Build with Maven ──────────────────────────────────────────────
 # The build context is ./epay (the multi-module Maven root).
 # The CI workflow must run `./mvnw -B package -DskipTests` before building

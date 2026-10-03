@@ -1,24 +1,19 @@
-# syntax=docker/dockerfile:1
-
 # ── Stage 1: Install production dependencies ──────────────────────────────
 FROM node:24.20.0-alpine3.24 AS deps
-RUN apk upgrade --no-cache
 WORKDIR /app
-COPY package.json ./
-RUN npm install --omit=dev
+COPY package.json package-lock.json* ./
+RUN npm ci --omit=dev
 
 # ── Stage 2: Build ────────────────────────────────────────────────────────
 FROM node:24.20.0-alpine3.24 AS builder
-RUN apk upgrade --no-cache
 WORKDIR /app
-COPY package.json ./
-RUN npm install
+COPY package.json package-lock.json* ./
+RUN npm ci
 COPY . .
 RUN npm run build
 
 # ── Stage 3: Runtime (standalone output only) ─────────────────────────────
 FROM node:24.20.0-alpine3.24 AS runtime
-RUN apk upgrade --no-cache
 
 WORKDIR /app
 ENV NODE_ENV=production

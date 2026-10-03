@@ -17,19 +17,18 @@ import { BASE_URL, JSON_HEADERS } from './config.js'
 
 export const options = {
   stages: [
-    { duration: '30s', target: 2   },  // baseline
-    { duration: '30s', target: 200 },  // spike!
-    { duration: '1m',  target: 200 },  // sustain spike
-    { duration: '1m',  target: 0   },  // recovery
+    { duration: '30s', target: 2   },
+    { duration: '30s', target: 200 },
+    { duration: '1m',  target: 200 }, 
+    { duration: '1m',  target: 0   }, 
   ],
   thresholds: {
-    http_req_failed:   ['rate<0.15'],   // allow higher failure during spike
-    http_req_duration: ['p(95)<8000'],  // generous threshold for spike
+    http_req_failed:   ['rate<0.15'],   
+    http_req_duration: ['p(95)<8000'],
   },
 }
 
 export default function () {
-  // Hit the lightest possible endpoint during spike to measure saturation
   const res = http.get(`${BASE_URL}/actuator/health`)
   check(res, {
     'health — alive during spike': (r) => r.status === 200,
@@ -37,7 +36,6 @@ export default function () {
 
   sleep(0.2)
 
-  // Also probe the auth endpoint
   const login = http.post(
     `${BASE_URL}/api/v1/auth/login`,
     JSON.stringify({ email: 'spike@epay.test', password: 'Spike@123' }),

@@ -86,10 +86,8 @@ pipeline {
         )
     }
 
-    // ═══════════════════════════════════════════════════════════════════════
     stages {
 
-        // ── 0. Initialise ────────────────────────────────────────────────
         stage('Initialise') {
             steps {
                 script {
@@ -121,10 +119,6 @@ pipeline {
             }
         }
 
-        // ════════════════════════════════════════════════════════════════
-        //  BACKEND
-        // ════════════════════════════════════════════════════════════════
-
         stage('Backend — Unit Tests & Coverage') {
             steps {
                 dir('epay') {
@@ -139,7 +133,6 @@ pipeline {
                         allowEmptyResults:        true,
                         skipMarkingBuildUnstable: false
                     )
-                    // JaCoCo HTML coverage report
                     publishHTML(target: [
                         allowMissing:          true,
                         alwaysLinkToLastBuild: true,
@@ -173,7 +166,6 @@ pipeline {
         }
 
         stage('Backend — Integration Tests') {
-            // Only run on non-PR builds — Testcontainers needs Docker
             when { not { changeRequest() } }
             steps {
                 dir('epay') {
@@ -211,8 +203,6 @@ pipeline {
                         fi
                     '''
 
-                    // Run smoke test — expects a live API at BASE_URL
-                    // If no staging URL, run against localhost (assumes service started externally)
                     def smokeUrl = env.STAGING_API_URL ?: 'http://localhost:8029'
                     sh "k6 run -e BASE_URL=${smokeUrl} k6/smoke.js || true"
                 }
@@ -275,10 +265,6 @@ pipeline {
             }
         }
 
-        // ════════════════════════════════════════════════════════════════
-        //  FRONTEND
-        // ════════════════════════════════════════════════════════════════
-
         stage('Frontend — Lint & Type Check') {
             steps {
                 dir('frontend') {
@@ -297,7 +283,6 @@ pipeline {
             }
             post {
                 always {
-                    // lcov.info for coverage tools
                     archiveArtifacts(
                         artifacts:         'frontend/coverage/**',
                         allowEmptyArchive: true
@@ -350,7 +335,6 @@ pipeline {
             }
             post {
                 always {
-                    // Publish JUnit XML results
                     junit(
                         testResults:       'frontend/playwright-results.xml',
                         allowEmptyResults: true
@@ -396,10 +380,6 @@ pipeline {
                 always { sh 'docker logout ghcr.io || true' }
             }
         }
-
-        // ════════════════════════════════════════════════════════════════
-        //  SECURITY SCANS
-        // ════════════════════════════════════════════════════════════════
 
         stage('Security — OWASP Dependency Check') {
             when {
@@ -508,10 +488,6 @@ pipeline {
                 }
             }
         }
-
-        // ════════════════════════════════════════════════════════════════
-        //  DEPLOY  (commented out until hosted)
-        // ════════════════════════════════════════════════════════════════
 
         stage('Deploy — Production') {
             when {

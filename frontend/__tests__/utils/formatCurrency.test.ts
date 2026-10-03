@@ -1,13 +1,5 @@
-/**
- * Sample unit tests for a currency formatter utility.
- *
- * These act as a template — replace with tests for your actual utilities.
- * Place real utility functions in src/utils/ or app/utils/ as needed.
- */
-
 import { describe, it, expect } from 'vitest'
 
-// ── Inline implementation (replace with import once you have the real file) ──
 function formatCurrency(amount: number, currency = 'NGN', locale = 'en-NG'): string {
   return new Intl.NumberFormat(locale, {
     style: 'currency',
@@ -18,13 +10,11 @@ function formatCurrency(amount: number, currency = 'NGN', locale = 'en-NG'): str
 }
 
 function parseCurrencyInput(raw: string): number {
-  // Strip everything except digits and the decimal separator
   const cleaned = raw.replace(/[^0-9.]/g, '')
   const value = parseFloat(cleaned)
   return isNaN(value) ? 0 : value
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 describe('formatCurrency', () => {
   it('formats a positive amount with NGN symbol', () => {
     const result = formatCurrency(5000)

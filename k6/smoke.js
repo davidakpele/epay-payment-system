@@ -23,7 +23,6 @@ export const options = {
 }
 
 export default function () {
-  // ── 1. Health check ──────────────────────────────────────────────────────
   const health = http.get(`${BASE_URL}/actuator/health`)
   check(health, {
     'health — status 200':   (r) => r.status === 200,
@@ -31,8 +30,6 @@ export default function () {
   })
 
   sleep(0.5)
-
-  // ── 2. API info / version ────────────────────────────────────────────────
   const info = http.get(`${BASE_URL}/actuator/info`)
   check(info, {
     'info — status 200 or 404': (r) => [200, 404].includes(r.status),
@@ -40,7 +37,6 @@ export default function () {
 
   sleep(0.5)
 
-  // ── 3. Auth endpoint reachable (expect 400/401, not 500) ─────────────────
   const loginProbe = http.post(
     `${BASE_URL}/api/v1/auth/login`,
     JSON.stringify({ email: '', password: '' }),

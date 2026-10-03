@@ -37,9 +37,9 @@ export const options = {
     { duration: '1m', target: 0   },
   ],
   thresholds: {
-    // Stress test — we expect degradation, but service must not fully fail
-    http_req_failed:   ['rate<0.10'],      // allow up to 10% errors under stress
-    http_req_duration: ['p(95)<5000'],     // 95th percentile still under 5 s
+   
+    http_req_failed:   ['rate<0.10'],
+    http_req_duration: ['p(95)<5000'],  
     stress_errors:     ['rate<0.10'],
   },
 }
