@@ -12,11 +12,6 @@
  * Run:
  *   k6 run k6/load.js
  *   k6 run -e BASE_URL=https://api.epay.com -e TEST_USER_EMAIL=user@test.com -e TEST_USER_PASS=secret k6/load.js
- *
- * Required env vars (optional — falls back to placeholders):
- *   BASE_URL         API base URL
- *   TEST_USER_EMAIL  A pre-seeded test account email
- *   TEST_USER_PASS   Test account password
  */
 
 import http    from 'k6/http'
