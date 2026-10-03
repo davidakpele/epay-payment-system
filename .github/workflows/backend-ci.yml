@@ -11,7 +11,6 @@ on:
     paths:
       - "epay/**"
       - ".github/workflows/backend-ci.yml"
-
 env:
   REGISTRY:   ghcr.io
   IMAGE_NAME: ${{ github.repository }}/epay-server
@@ -68,7 +67,7 @@ jobs:
           name: jacoco-coverage
           path: epay/**/target/site/jacoco/
           retention-days: 7
-
+# 
       - name: Build fat-JAR (skip tests — already ran above)
         working-directory: epay
         run: ./mvnw -B package -DskipTests --no-transfer-progress
@@ -124,8 +123,6 @@ jobs:
           name: failsafe-reports
           path: epay/**/target/failsafe-reports/
           retention-days: 7
-
-
   k6-smoke:
     name: k6 Smoke Test
     runs-on: ubuntu-latest
