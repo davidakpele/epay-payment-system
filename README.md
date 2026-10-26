@@ -38,7 +38,7 @@ A digital payments platform built with Spring Boot 4 and Next.js. ePay allows us
 
 ## About the App
 
-ePay is a feature-complete digital banking and payments platform. It provides a unified wallet that supports multiple currencies, payment gateways (Paystack and Flutterwave), bills payment for utility services, virtual debit cards, investment plans, escrow, and a full administrative back-office.
+ePay is a feature-complete digital banking and payments platform. It provides a unified wallet that supports multiple currencies, payment gateways, bills payment for utility services, virtual debit cards, investment plans, escrow, and a full administrative back-office.
 
 The backend is a Java 21 Spring Boot multi-module monolith with 18 Maven modules. The frontend is a Next.js 16 app with server-side rendering and an App Router architecture. Everything runs inside Docker, behind a hardened Nginx reverse proxy with WAF-level protection.
 
