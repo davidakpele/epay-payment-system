@@ -10,4 +10,5 @@ public interface IRateLimitService {
     void startCoolDown(String key, Duration duration);
     boolean isCoolingDown(String key);
     long getCoolDownTtlSeconds(String key);
+    RateLimitResult tryConsumeWithRetry(String key, int capacity, long refillTokens, Duration refillPeriod);
 }

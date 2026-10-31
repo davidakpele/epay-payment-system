@@ -2,6 +2,7 @@ package com.epay.auth.service;
 
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.util.Calendar;
 import java.util.Date;
@@ -87,6 +88,7 @@ public class AuthenticationService implements IAuthenticationService{
     private final IMessagingService messagingService;
     private final VerificationTokenRepository verificationTokenRepository;
     private final NotificationProperties notificationProperties;
+    private final AccountLockoutService accountLockoutService;
 
     private String formatNow() {
         return ZonedDateTime.now(ZoneId.systemDefault()).format(LOGIN_TIME_FMT);
@@ -283,7 +285,18 @@ public class AuthenticationService implements IAuthenticationService{
                     HttpStatus.UNAUTHORIZED);
         }
 
-        userAttemptService.createFailAttempt(user.getId(), AttemptType.LOGIN);
+        final String clientIp = extractClientIp(httpRequest);
+        if (accountLockoutService.checkLockout(user.getId()).locked()) {
+            LockoutStatus ls = accountLockoutService.checkLockout(user.getId());
+            Map<String, Object> lockResp = new LinkedHashMap<>();
+            lockResp.put("success", false);
+            lockResp.put("message", "Account is temporarily locked due to repeated failed login attempts. Try again in " + Math.max(1L, ls.retryAfterSeconds() / 60L) + " minute(s).");
+            lockResp.put("retryAfterSeconds", ls.retryAfterSeconds());
+            lockResp.put("lockedUntilEpoch", ls.lockedUntilEpoch());
+            lockResp.put("lastFailedIp", ls.lastIp());
+            lockResp.put("status", 423);
+            return ResponseEntity.status(423).body(lockResp);
+        }
 
         try {
 
@@ -295,6 +308,8 @@ public class AuthenticationService implements IAuthenticationService{
             if (user.isTwoFactorEnabled()) {
                 return handleTwoFactorAuth(user, authResponse);
             }
+
+            accountLockoutService.resetOnSuccess(user.getId());
 
             UserTracer session = userTracerService.createSession(user);
             String tokenId = UUID.randomUUID().toString();
@@ -310,7 +325,7 @@ public class AuthenticationService implements IAuthenticationService{
                     .orElseThrow(() -> new RuntimeException("User record not found"));
 
             final String loginTime = formatNow();
-            final String ipAddr = extractClientIp(httpRequest);
+            final String ipAddr = clientIp;
             final String device = extractDevice(httpRequest);
             final String fullName = rec.getFirstName() + " " + rec.getLastName();
 
@@ -371,6 +386,8 @@ public class AuthenticationService implements IAuthenticationService{
 
         } catch (BadCredentialsException e) {
 
+            accountLockoutService.recordFailedAttempt(user.getId(), clientIp);
+            userAttemptService.createFailAttempt(user.getId(), AttemptType.LOGIN);
             return buildAuthError(
                     authResponse,
                     "Invalid user credentials.",
