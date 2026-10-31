@@ -10,35 +10,39 @@ spring:
   autoconfigure:
     exclude:
       - org.springframework.boot.autoconfigure.security.oauth2.resource.servlet.OAuth2ResourceServerAutoConfiguration
+  main:
+    allow-bean-definition-overriding: true
+
   error:
-    include-message: always
+    include-message: never
     include-binding-errors: always
     include-stacktrace: never
     include-exception: false
     whitelabel:
       enabled: false
+
   datasource:
-    url: jdbc:postgresql://postgres:5432/epay
-    username: ${DB_USERNAME:epay}
-    password: ${DB_PASSWORD:epay}
+    url: ${DB_URL:jdbc:postgresql://postgres:5432/epay}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
     hikari:
+      pool-name: HikariPool
       auto-commit: false
       minimum-idle: 5
       maximum-pool-size: 10
       idle-timeout: 30000
       connection-timeout: 20000
-      pool-name: HikariPool
       max-lifetime: 1200000
       leak-detection-threshold: 60000
+
   jpa:
-    hibernate:
-      ddl-auto: update
-    show-sql: false
     open-in-view: false
+    show-sql: false
+    hibernate:
+      ddl-auto: ${JPA_DDL_AUTO:validate}
     properties:
       hibernate:
-        # dialect auto-detected from the JDBC driver — no need to specify explicitly
         format_sql: true
         order_inserts: true
         order_updates: true
@@ -53,18 +57,21 @@ spring:
   sql:
     init:
       mode: never
+
   data:
     rest:
       base-path: /data-rest
     redis:
-      host: redis
-      port: 6379
+      host: ${REDIS_HOST:redis}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
       timeout: 2000ms
       lettuce:
         pool:
           max-active: 8
           max-idle: 4
           min-idle: 1
+
   cloud:
     task:
       initialize-enabled: false
@@ -82,12 +89,12 @@ spring:
       add-mappings: false
       static-locations:
         - classpath:/static/
-        - file:/var/www/uploads/images/
-  main:
-    allow-bean-definition-overriding: true
+        - file:${FILE_UPLOAD_DIR:/var/www/uploads/images}/
+
   security:
     filter:
       dispatcher-types: REQUEST,ERROR,ASYNC
+
   servlet:
     multipart:
       enabled: true
@@ -95,45 +102,48 @@ spring:
       max-request-size: 12MB
       file-size-threshold: 0
       location: /tmp
+
   rabbitmq:
     host: ${SPRING_RABBITMQ_HOST:rabbitmq}
     port: ${SPRING_RABBITMQ_PORT:5672}
-    username: ${SPRING_RABBITMQ_USERNAME:guest}
-    password: ${SPRING_RABBITMQ_PASSWORD:guest}
+    username: ${SPRING_RABBITMQ_USERNAME}
+    password: ${SPRING_RABBITMQ_PASSWORD}
 
   mail:
-    host: smtp.gmail.com
-    port: 587
-    username: ${GMAIL_USERNAME:akpeledavidprogress@gmail.com}
-    password: ${GMAIL_APP_PASSWORD:eruxeybiakedfjfp}
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${GMAIL_USERNAME}
+    password: ${GMAIL_APP_PASSWORD}
     properties:
       mail:
+        transport:
+          protocol: smtp
         smtp:
           auth: true
           starttls:
             enable: true
             required: true
-        transport:
-          protocol: smtp
+
   thymeleaf:
     prefix: classpath:/templates/
     suffix: .html
     mode: HTML
     encoding: UTF-8
-    cache: false
+    cache: ${THYMELEAF_CACHE:true}
+
+server:
+  port: ${SERVER_PORT:8029}
 
 pesco:
   banking:
     service:
-      email: artexnetworkservice@gmail.com
+      email: ${BANKING_SERVICE_EMAIL}
 
 file:
   upload-dir: ${FILE_UPLOAD_DIR:/var/www/uploads/images}
   max-file-size: 50MB
   allowed-file-types: image/jpeg,image/png,image/gif,image/webp
 
-server:
-  port: ${SERVER_PORT:8029}
 epay:
   logging:
     enabled: true
@@ -142,63 +152,84 @@ epay:
       - /favicon.ico
       - /static/**
       - /uploads/**
+
   security:
     jwt:
-      secret: ${JWT_SECRET:dGhpcy1pcy1hLXNlY3VyZS1kZXYtb25seS1zZWNyZXQta2V5LTMyLWJ5dGVzLWxvbmchISE=}
+      secret: ${JWT_SECRET}        
+      issuer: ${JWT_ISSUER:https://auth.epay.com}
+      audience: "Unified Dynamic Systems"
+      algorithm: HS256
+      token-prefix: Bearer
+      authorization-header: Authorization
+      clock-skew-seconds: 30
       expiration-ms: 3600000
       expiration-minutes: 30
       refresh-expiration-days: 7
-      issuer: "https://auth.epay.com"
-      audience: "Unified Dynamic Systems"
-      clock-skew-seconds: 30
-      algorithm: "HS256"
-      token-prefix: "Bearer"
-      authorization-header: "Authorization"
-      enable-token-blacklist: true
-      blacklist-cleanup-interval-minutes: 60
-      max-blacklist-size: 10000
-      cookie-name: "jwt-token"
-      http-only-cookie: true
-      secure-cookie: true
-      same-site-cookie: "Strict"
-      cors-allowed-origins: "http://localhost:3000,http://localhost:8000"
-      enable-multi-factor-support: false
-      max-tokens-per-user: 5
-      log-token-issuance: false
-      enable-token-rotation: true
-      rotation-grace-period-minutes: 5
       access-token:
         expiration: 900000
       refresh-token:
         expiration: 604800000
+      enable-token-rotation: true
+      rotation-grace-period-minutes: 5
+      enable-token-blacklist: true
+      blacklist-cleanup-interval-minutes: 60
+      max-blacklist-size: 10000
+      max-tokens-per-user: 5
+      enable-multi-factor-support: false
+      log-token-issuance: false
+      cookie-name: jwt-token
+      http-only-cookie: true
+      secure-cookie: ${JWT_SECURE_COOKIE:true}
+      same-site-cookie: Strict
+      cors-allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:8000}
+    lockout:
+      enabled: true
+      max-attempts: 3
+      base-duration-minutes: 20
+      step-minutes: 15
+      max-duration-minutes: 1440
+      fail-window-minutes: 30
+      level-ttl-hours: 24
+      recent-ips: 5
+
   rate-limit:
-    global-ip-limit: 200
-    global-window-seconds: 60
-    auth-limit: 10
-    auth-window-seconds: 60
-    wallet-limit: 30
-    wallet-window-seconds: 60
-    user-limit: 50
-    user-window-seconds: 60
-    penalty-multiplier: 3
-    max-penalty-seconds: 3600
-    suspicious-threshold: 5
+    default-bucket:
+      capacity: 100
+      refill-tokens: 10
+      refill-period-seconds: 1
+    routes:
+      auth:
+        capacity: 20
+        refill-tokens: 5
+        refill-period-seconds: 1
+      wallet:
+        capacity: 30
+        refill-tokens: 10
+        refill-period-seconds: 1
+      user:
+        capacity: 50
+        refill-tokens: 10
+        refill-period-seconds: 1
+
   gateways:
     paystack:
-      secret-key: ${PAYSTACK_SECRET_KEY:}
-      transfer-otp: ${PAYSTACK_TRANSFER_OTP:123456}
+      secret-key: ${PAYSTACK_SECRET_KEY}
+      transfer-otp: ${PAYSTACK_TRANSFER_OTP:}
     flutterwave:
-      secret-key: ${FLUTTERWAVE_SECRET_KEY:}
+      secret-key: ${FLUTTERWAVE_SECRET_KEY}
+
   cards:
     sudo:
       api-key: ${SUDO_API_KEY:}
+
   super-admin:
-    username: ${SUPER_ADMIN_USERNAME:superadmin}
-    email: ${SUPER_ADMIN_EMAIL:superadmin@epay.com}
-    password: ${SUPER_ADMIN_PASSWORD:ChangeMe@2026!}
+    username: ${SUPER_ADMIN_USERNAME}
+    email: ${SUPER_ADMIN_EMAIL}
+    password: ${SUPER_ADMIN_PASSWORD}  
     first-name: ${SUPER_ADMIN_FIRST_NAME:Super}
     last-name: ${SUPER_ADMIN_LAST_NAME:Admin}
     phone: ${SUPER_ADMIN_PHONE:}
+
   risk:
     high-freq-count: 20
     freq-window-minutes: 60
@@ -211,13 +242,32 @@ epay:
     min-account-age-minutes: 30
     soft-block-score: 60
     hard-block-score: 80
+
   liquidity:
     sync-interval-ms: 1800000
+
   maintenance:
     cron: "0 30 0 1 * *"
     batch-size: 500
+
   webhooks:
     retry-interval-ms: 60000
+
+# Third-party gateway clients
+paystack:
+  api:
+    url: https://api.paystack.co
+    key: ${PAYSTACK_SECRET_KEY}
+
+flutterwave:
+  url: https://api.flutterwave.com/v3
+  public-key: ${FLUTTERWAVE_PUBLIC_KEY}
+  secret-key: ${FLUTTERWAVE_SECRET_KEY}
+
+twilio:
+  account-sid: ${TWILIO_ACCOUNT_SID}
+  auth-token: ${TWILIO_AUTH_TOKEN}
+  whatsapp-number: ${TWILIO_WHATSAPP_NUMBER}
 
 geolocation:
   ip-api:
@@ -226,58 +276,40 @@ geolocation:
   cache:
     max-size: 5000
     expire-hours: 24
+
 springdoc:
+  packages-to-scan: com.epay
+  show-actuator: false
   api-docs:
     path: /v3/api-docs
+    enabled: ${SWAGGER_ENABLED:false}
   swagger-ui:
     path: /docs
-    enabled: true
+    enabled: ${SWAGGER_ENABLED:false}
     try-it-out-enabled: true
     operations-sorter: method
     tags-sorter: alpha
     display-request-duration: true
     persist-authorization: true
     default-models-expand-depth: 1
-  show-actuator: false
-  packages-to-scan: com.epay
 
 datasource:
   micrometer:
     includes: all
 
-twilio:
-  account-sid: ${TWILIO_ACCOUNT_SID}
-  auth-token: ${TWILIO_AUTH_TOKEN}
-  whatsapp-number: ${TWILIO_WHATSAPP_NUMBER}
-
-
-flutterwave:
-  public-key: ${FLUTTERWAVE_PUBLIC_KEY}
-  secret-key: ${FLUTTERWAVE_SECRET_KEY}
-  url: https://api.flutterwave.com/v3
-
-paystack:
-  api:
-    url: https://api.paystack.co
-    key: sk_test_aaa8ff310f15a0ad5f23950a584f8942cbdf02aa
-
 management:
   endpoints:
     web:
       exposure:
-        include: health, info, metrics, prometheus, loggers, env, zipkin
+        include: health, info, metrics, prometheus
   endpoint:
-    prometheus:
-      enabled: true
     health:
       show-details: when-authorized
+    prometheus:
+      enabled: true
   health:
     mail:
       enabled: false
-    # Disable the reactive Redis health indicator — the imperative one
-    # (redis) already covers connectivity. The reactive indicator uses a
-    # separate Lettuce connection factory that resolves the hostname at
-    # bean-creation time, before property overrides are fully applied.
     data-redis:
       enabled: false
   metrics:
@@ -285,22 +317,13 @@ management:
       application: ${spring.application.name}
   tracing:
     sampling:
-      # 1.0 = 100% of requests traced. Fine for dev/staging.
-      # Lower to 0.1 (10%) in production to reduce overhead.
-      probability: 1.0
-    # Spring Boot 4.x Zipkin export config namespace.
-    # The old management.zipkin.tracing.* was Boot 3.x only.
-    # Ref: https://docs.spring.io/spring-boot/4.1/reference/actuator/tracing.html
+      probability: ${TRACING_SAMPLE_RATE:0.1} 
     export:
       zipkin:
         endpoint: ${MANAGEMENT_ZIPKIN_TRACING_ENDPOINT:http://zipkin:9411/api/v2/spans}
         connect-timeout: 5s
         read-timeout: 10s
 
-# Spring Boot 4.x injects traceId/spanId into logs automatically when
-# Micrometer Tracing is on the classpath. logging.pattern.correlation
-# controls the format. This produces: [epay-server,traceId,spanId]
-# before the logger name on every log line that is part of a trace.
 logging:
   include-application-name: false
   file:

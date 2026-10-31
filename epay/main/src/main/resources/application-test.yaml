@@ -1,27 +1,16 @@
-# ── Test / CI profile ────────────────────────────────────────────────────────
-# Activated by --spring.profiles.active=test (used in k6 smoke test CI job).
-# Overrides production defaults that require infrastructure not available on
-# a bare GitHub Actions runner.
 
 logging:
-  # Write log files to the system temp dir instead of /var/log/epay so the
-  # app starts successfully on any runner without needing sudo mkdir.
   file:
     path: ${java.io.tmpdir}/epay-logs
 
 management:
   tracing:
-    # Disable Zipkin export in test/CI — zipkin:9411 is not available on the runner.
     export:
       zipkin:
         enabled: false
   health:
     mail:
-      # Disable mail health check — SMTP is not available in CI.
       enabled: false
-
-# Third-party API credentials are not available in CI.
-# Provide empty-string defaults so the app context boots without these env vars.
 twilio:
   account-sid: ${TWILIO_ACCOUNT_SID:}
   auth-token: ${TWILIO_AUTH_TOKEN:}
@@ -33,15 +22,9 @@ flutterwave:
 
 spring:
   rabbitmq:
-    # In CI the broker runs as a service container on localhost.
-    # The base config points to 'rabbitmq' (Docker network hostname).
     host: ${SPRING_RABBITMQ_HOST:localhost}
   data:
     redis:
-      # In CI Redis runs as a service container on localhost.
-      # The base config points to 'redis' (Docker network hostname).
-      # spring.data.redis.host is what Spring Boot 4.x Lettuce reads for
-      # both the imperative and reactive connection factories.
       host: ${REDIS_HOST:localhost}
   health:
     rabbit:

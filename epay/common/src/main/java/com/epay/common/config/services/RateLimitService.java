@@ -1,5 +1,6 @@
 package com.epay.common.config.services;
 
+import com.epay.common.interfaces.RateLimitResult;
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
 import io.github.bucket4j.BucketConfiguration;
@@ -98,5 +99,20 @@ public class RateLimitService implements IRateLimitService {
     public long getCoolDownTtlSeconds(String key) {
         Long ttl = stringRedis.getExpire(key);
         return (ttl != null && ttl > 0) ? ttl : 0;
+    }
+
+    @Override
+    public RateLimitResult tryConsumeWithRetry(String key, int capacity, long refillTokens, Duration refillPeriod) {
+        @SuppressWarnings("deprecation")
+        Bandwidth bandwidth = Bandwidth.classic(capacity, Refill.greedy(refillTokens, refillPeriod));
+        BucketConfiguration configuration = BucketConfiguration.builder().addLimit(bandwidth).build();
+        Bucket bucket = proxyManager.builder().build(key, () -> configuration);
+        io.github.bucket4j.ConsumptionProbe probe = bucket.tryConsumeAndReturnRemaining(1);
+        if (probe.isConsumed()) {
+            return new RateLimitResult(true, probe.getRemainingTokens(), 0L);
+        } else {
+            long retryAfterSeconds = Math.max(1L, (long) Math.ceil(probe.getNanosToWaitForRefill() / 1_000_000_000.0));
+            return new RateLimitResult(false, 0L, retryAfterSeconds);
+        }
     }
 }
