@@ -206,7 +206,6 @@ public class RateLimitingFilter extends OncePerRequestFilter {
         objectMapper.writeValue(response.getWriter(), body);
     }
 
-    /** Same header names/semantics as express-rate-limit: Reset is an epoch timestamp in seconds. */
     private void writeRateLimitHeaders(HttpServletResponse response, Tightest tightest) {
         if (tightest.key == null) return;
 
