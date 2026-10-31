@@ -1,31 +1,3 @@
-// ─────────────────────────────────────────────────────────────────────────────
-//  ePay Payment System — Declarative Jenkins Pipeline
-//
-//  Full pipeline stages:
-//    Initialise
-//    Backend  → Unit Tests → Integration Tests → k6 Smoke → Docker Build/Push
-//    Frontend → Lint → Vitest → Build → Playwright E2E → Docker Build/Push
-//    Security → OWASP → npm Audit → Trivy
-//    Deploy   → Production (SSH — commented until hosted)
-//
-//  Required Jenkins credentials (Manage Jenkins → Credentials):
-//    GHCR_USERNAME   — Secret text  — GitHub username / org
-//    GHCR_TOKEN      — Secret text  — GitHub PAT with packages:write
-//    DEPLOY_SSH_KEY  — SSH private key (comment out deploy stage if not hosted)
-//    DEPLOY_HOST     — Secret text  — production server hostname / IP
-//    DEPLOY_USER     — Secret text  — SSH user on production server
-//    NVD_API_KEY     — Secret text  — NVD API key for OWASP DC (optional)
-//
-//  Required tools (Manage Jenkins → Tools):
-//    JDK:  name="JDK21",  Temurin 21
-//    Node: name="Node24", version 24.11.1
-//
-//  Required plugins:
-//    Pipeline, Git, Docker Pipeline, Credentials Binding,
-//    JUnit, HTML Publisher, Warnings Next Generation,
-//    NodeJS, Cobertura (or Coverage API)
-// ─────────────────────────────────────────────────────────────────────────────
-
 pipeline {
 
     agent any
@@ -105,7 +77,7 @@ pipeline {
                     env.FRONTEND_IMAGE = "ghcr.io/${repoPath}/epay-frontend"
 
                     echo """
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+━━━━━━
   Branch       : ${env.BRANCH_NAME}
   Commit       : ${env.SHORT_SHA}
   Image tag    : ${env.IMAGE_TAG}
@@ -114,7 +86,7 @@ pipeline {
   Load tests   : ${params.RUN_LOAD_TESTS}
   E2E tests    : ${params.RUN_E2E}
   Security     : ${!params.SKIP_SECURITY_SCAN}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"""
+━━━━━━"""
                 }
             }
         }
@@ -502,7 +474,7 @@ pipeline {
                     def frontendTag = params.FRONTEND_TAG != 'latest' ? params.FRONTEND_TAG : env.IMAGE_TAG
 
                     echo """
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+━━━━━━
   DEPLOY SKIPPED — app is not yet hosted.
   Add DEPLOY_SSH_KEY, DEPLOY_HOST, DEPLOY_USER
   credentials and uncomment the SSH block.
@@ -510,7 +482,7 @@ pipeline {
   Would deploy:
     Backend  : ${env.BACKEND_IMAGE}:${backendTag}
     Frontend : ${env.FRONTEND_IMAGE}:${frontendTag}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"""
+━━━━━━"""
 
                     /*
                     withCredentials([
@@ -578,7 +550,7 @@ pipeline {
         success {
             echo """
 ╔══════════════════════════════════════════════════╗
-║  ✅  Pipeline PASSED                             ║
+║   Pipeline PASSED                             ║
 ║  Branch : ${env.BRANCH_NAME?.padRight(38)}  ║
 ║  Commit : ${env.SHORT_SHA?.padRight(38)}  ║
 ╚══════════════════════════════════════════════════╝"""
@@ -586,7 +558,7 @@ pipeline {
         failure {
             echo """
 ╔══════════════════════════════════════════════════╗
-║  ❌  Pipeline FAILED                             ║
+║  Pipeline FAILED                             ║
 ║  Branch : ${env.BRANCH_NAME?.padRight(38)}  ║
 ║  Commit : ${env.SHORT_SHA?.padRight(38)}  ║
 ╚══════════════════════════════════════════════════╝"""
