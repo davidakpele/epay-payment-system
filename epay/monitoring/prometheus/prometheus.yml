@@ -28,8 +28,6 @@ scrape_configs:
     static_configs:
       - targets:
           - "epay-server-1:8029"
-          - "epay-server-2:8029"
-          - "epay-server-3:8029"
         labels:
           service: epay-server
           language: java
@@ -183,32 +181,4 @@ scrape_configs:
         labels:
           service: postgresql
           tier: database
-          cluster: epay-prod
-
-  # ============================================
-  #  cADVISOR — container-level resource metrics
-  #
-  #  Add to docker-compose.yml:
-  #
-  #  cadvisor:
-  #    image: gcr.io/cadvisor/cadvisor:v0.49.1
-  #    container_name: epay-cadvisor
-  #    volumes:
-  #      - /:/rootfs:ro
-  #      - /var/run:/var/run:ro
-  #      - /sys:/sys:ro
-  #      - /var/lib/docker/:/var/lib/docker:ro
-  #    ports:
-  #      - "8080:8080"
-  #    networks: [epay-network]
-  #    restart: unless-stopped
-  # ============================================
-  - job_name: cadvisor
-    scrape_interval: 30s
-    scrape_timeout: 10s
-    static_configs:
-      - targets: ["cadvisor:8080"]
-        labels:
-          service: cadvisor
-          tier: container
           cluster: epay-prod

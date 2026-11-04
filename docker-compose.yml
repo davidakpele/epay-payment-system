@@ -176,6 +176,15 @@ services:
       TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
       TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
       TWILIO_WHATSAPP_NUMBER: ${TWILIO_WHATSAPP_NUMBER:-}
+      SUPER_ADMIN_USERNAME: ${SUPER_ADMIN_USERNAME:-superadmin}
+      SUPER_ADMIN_EMAIL: ${SUPER_ADMIN_EMAIL:-superadmin@epay.com}
+      SUPER_ADMIN_PASSWORD: ${SUPER_ADMIN_PASSWORD:-ChangeMe@2026!}
+      SUPER_ADMIN_FIRST_NAME: ${SUPER_ADMIN_FIRST_NAME:-Super}
+      SUPER_ADMIN_LAST_NAME: ${SUPER_ADMIN_LAST_NAME:-Admin}
+      SUPER_ADMIN_PHONE: ${SUPER_ADMIN_PHONE:-}
+      BANKING_SERVICE_EMAIL: ${BANKING_SERVICE_EMAIL:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-sonnet-4-20250514}
       INSTANCE_ID: ${HOSTNAME:-unknown}
       SPRING_DATASOURCE_HIKARI_MAXIMUM-POOL-SIZE: 10
       SPRING_DATASOURCE_HIKARI_MINIMUM-IDLE: 5
@@ -199,7 +208,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          "wget -qO- http://localhost:8029/actuator/health || exit 1",
+          "wget -qO- http://127.0.0.1:8029/actuator/health || exit 1",
         ]
       interval: 15s
       timeout: 10s
@@ -229,23 +238,23 @@ services:
       <<: *server-base-env
       INSTANCE_ID: epay-server-1
 
-  epay-server-2:
-    <<: *server-base
-    container_name: epay-server-2
-    ports:
-      - "8022:8029"
-    environment:
-      <<: *server-base-env
-      INSTANCE_ID: epay-server-2
+  # epay-server-2:
+  #   <<: *server-base
+  #   container_name: epay-server-2
+  #   ports:
+  #     - "8022:8029"
+  #   environment:
+  #     <<: *server-base-env
+  #     INSTANCE_ID: epay-server-2
 
-  epay-server-3:
-    <<: *server-base
-    container_name: epay-server-3
-    ports:
-      - "8023:8029"
-    environment:
-      <<: *server-base-env
-      INSTANCE_ID: epay-server-3
+  # epay-server-3:
+  #   <<: *server-base
+  #   container_name: epay-server-3
+  #   ports:
+  #     - "8023:8029"
+  #   environment:
+  #     <<: *server-base-env
+  #     INSTANCE_ID: epay-server-3
 
   # Backend Instance 4 (Optional - for high load)
   # epay-server-4:
@@ -266,12 +275,8 @@ services:
     depends_on:
       epay-server-1:
         condition: service_healthy
-      epay-server-2:
-        condition: service_healthy
-      epay-server-3:
-        condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:3000 || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000 || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -291,17 +296,17 @@ services:
     ports:
       - "3001:3000"
 
-  frontend-2:
-    <<: *frontend-base
-    container_name: epay-frontend-2
-    ports:
-      - "3002:3000"
+  # frontend-2:
+  #   <<: *frontend-base
+  #   container_name: epay-frontend-2
+  #   ports:
+  #     - "3002:3000"
 
-  frontend-3:
-    <<: *frontend-base
-    container_name: epay-frontend-3
-    ports:
-      - "3003:3000"
+  # frontend-3:
+  #   <<: *frontend-base
+  #   container_name: epay-frontend-3
+  #   ports:
+  #     - "3003:3000"
 
   nginx:
     build:
@@ -323,15 +328,7 @@ services:
     depends_on:
       epay-server-1:
         condition: service_healthy
-      epay-server-2:
-        condition: service_healthy
-      epay-server-3:
-        condition: service_healthy
       frontend-1:
-        condition: service_healthy
-      frontend-2:
-        condition: service_healthy
-      frontend-3:
         condition: service_healthy
     healthcheck:
       test:
@@ -341,7 +338,7 @@ services:
           "--quiet",
           "--tries=1",
           "--spider",
-          "http://localhost/nginx-health",
+          "http://127.0.0.1/nginx-health",
         ]
       interval: 30s
       timeout: 10s
@@ -414,8 +411,6 @@ services:
       - "--web.enable-admin-api"
     depends_on:
       - epay-server-1
-      - epay-server-2
-      - epay-server-3
     restart: unless-stopped
     networks:
       - epay-network
@@ -470,18 +465,26 @@ services:
       - "--config.file=/etc/alertmanager/alertmanager.yml"
       - "--storage.path=/alertmanager"
       - "--web.listen-address=:9093"
-      - "--cluster.listen-address="   # single-instance mode (no HA clustering)
+      - "--cluster.listen-address=" # single-instance mode (no HA clustering)
     environment:
-      SMTP_HOST:              ${SMTP_HOST:-smtp.gmail.com}
-      GMAIL_USERNAME:         ${GMAIL_USERNAME:-}
-      GMAIL_APP_PASSWORD:     ${GMAIL_APP_PASSWORD:-}
-      ALERT_FROM_EMAIL:       ${ALERT_FROM_EMAIL:-alerts@epay.app}
-      ALERT_EMAIL_TEAM:       ${ALERT_EMAIL_TEAM:-team@epay.app}
-      ALERT_EMAIL_CRITICAL:   ${ALERT_EMAIL_CRITICAL:-oncall@epay.app}
-      ALERT_EMAIL_PAYMENTS:   ${ALERT_EMAIL_PAYMENTS:-payments-team@epay.app}
-      SLACK_WEBHOOK_URL:      ${SLACK_WEBHOOK_URL:-}
+      SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
+      GMAIL_USERNAME: ${GMAIL_USERNAME:-}
+      GMAIL_APP_PASSWORD: ${GMAIL_APP_PASSWORD:-}
+      ALERT_FROM_EMAIL: ${ALERT_FROM_EMAIL:-alerts@epay.app}
+      ALERT_EMAIL_TEAM: ${ALERT_EMAIL_TEAM:-team@epay.app}
+      ALERT_EMAIL_CRITICAL: ${ALERT_EMAIL_CRITICAL:-oncall@epay.app}
+      ALERT_EMAIL_PAYMENTS: ${ALERT_EMAIL_PAYMENTS:-payments-team@epay.app}
+      SLACK_WEBHOOK_URL: ${SLACK_WEBHOOK_URL:-}
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9093/-/healthy"]
+      test:
+        [
+          "CMD",
+          "wget",
+          "--quiet",
+          "--tries=1",
+          "--spider",
+          "http://localhost:9093/-/healthy",
+        ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -517,7 +520,15 @@ services:
     ports:
       - "8081:8080"
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/healthz"]
+      test:
+        [
+          "CMD",
+          "wget",
+          "--quiet",
+          "--tries=1",
+          "--spider",
+          "http://localhost:8080/healthz",
+        ]
       interval: 30s
       timeout: 10s
       retries: 3
