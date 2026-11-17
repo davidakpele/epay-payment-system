@@ -70,7 +70,7 @@ receivers:
 
   - name: "email-critical"
     email_configs:
-      - to: "oncall@epay.app"
+      - to: "willstonestrategic@gmail.com"
         send_resolved: true
         headers:
           Subject: "🚨 CRITICAL — {{ .GroupLabels.alertname }} ({{ .GroupLabels.service }})"

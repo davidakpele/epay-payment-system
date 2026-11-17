@@ -1,6 +1,6 @@
 package com.epay.notification.publisher;
 
-import com.epay.common.config.messaging.RabbitMQConfig;
+import com.epay.common.config.messaging.KafkaTopicConfig;
 import com.epay.common.interfaces.IWalletNotificationPublisher;
 import com.epay.domain.notification.input.BlockUserWallet;
 import com.epay.domain.notification.input.CreditWalletNotification;
@@ -13,8 +13,7 @@ import com.epay.domain.notification.input.SwapCurrencyPayload;
 import com.epay.domain.notification.input.WalletPinNotification;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.amqp.AmqpException;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -25,14 +24,14 @@ import java.time.OffsetDateTime;
 @RequiredArgsConstructor
 public class WalletNotificationMessageProducer implements IWalletNotificationPublisher {
 
-    private final RabbitTemplate rabbitTemplate;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
 
     @Override
     public void publishCreditNotification(String recipientEmail, BigDecimal transferAmount,
                                           String senderFullName, String receiverFullName,
                                           BigDecimal recipientTotalBalance, String currency,
                                           String transactionId, BigDecimal previousBalance) {
-        send(RabbitMQConfig.WALLET_EXCHANGE, RabbitMQConfig.ROUTING_KEY_CREDIT_WALLET,
+        send(KafkaTopicConfig.TOPIC_CREDIT_WALLET, transactionId,
                 new CreditWalletNotification(recipientEmail, transferAmount, senderFullName,
                         receiverFullName, recipientTotalBalance, currency, transactionId, previousBalance));
     }
@@ -43,7 +42,7 @@ public class WalletNotificationMessageProducer implements IWalletNotificationPub
                                          String receiverFullName, BigDecimal balance,
                                          String currency, String transactionId,
                                          BigDecimal previousBalance) {
-        send(RabbitMQConfig.WALLET_EXCHANGE, RabbitMQConfig.ROUTING_KEY_DEBIT_WALLET,
+        send(KafkaTopicConfig.TOPIC_DEBIT_WALLET, transactionId,
                 new DebitWalletNotification(senderEmail, feeAmount, transferAmount,
                         senderFullName, receiverFullName, balance, currency, transactionId, previousBalance));
     }
@@ -54,7 +53,7 @@ public class WalletNotificationMessageProducer implements IWalletNotificationPub
                                            String accountHolder, BigDecimal availableBalance,
                                            BigDecimal previousBalance, String terminalNumber,
                                            String currencySymbol) {
-        send(RabbitMQConfig.WALLET_EXCHANGE, RabbitMQConfig.ROUTING_KEY_DEPOSIT_WALLET,
+        send(KafkaTopicConfig.TOPIC_DEPOSIT_WALLET, recipientEmail,
                 new DepositWalletNotification(recipientEmail, recipientName, depositAmount,
                         amount, previousBalance, availableBalance, terminalNumber, accountHolder, currencySymbol));
     }
@@ -66,8 +65,7 @@ public class WalletNotificationMessageProducer implements IWalletNotificationPub
                                                Boolean success, OffsetDateTime timestamp,
                                                BigDecimal totalAmountSpent, String userEmail,
                                                String userFirstName, Long userId, String userLastName) {
-        send(RabbitMQConfig.WALLET_EXCHANGE,
-                RabbitMQConfig.ROUTING_KEY_WALLET_MAINTENANCE_SERVICE_DEDUCTION,
+        send(KafkaTopicConfig.TOPIC_MAINTENANCE_DEDUCTION, userEmail,
                 new MaintenanceDeductionNotification(actionType, availableBalance, currency,
                         feeAmount, previousBalance, reason, success, timestamp,
                         totalAmountSpent, userEmail, userFirstName, userId, userLastName));
@@ -85,7 +83,7 @@ public class WalletNotificationMessageProducer implements IWalletNotificationPub
         payload.setAvailableBalance(availableBalance);
         payload.setCurrencySymbol(currency);
         payload.setCurrencyExchange(currencyExchange);
-        send(RabbitMQConfig.WALLET_EXCHANGE, RabbitMQConfig.ROUTING_KEY_SWAP_WALLET, payload);
+        send(KafkaTopicConfig.TOPIC_SWAP_WALLET, email, payload);
     }
 
     @Override
@@ -95,7 +93,7 @@ public class WalletNotificationMessageProducer implements IWalletNotificationPub
         payload.setFirstName(firstName);
         payload.setLastName(lastName);
         payload.setMessage(message);
-        send(RabbitMQConfig.WALLET_EXCHANGE, RabbitMQConfig.ROUTING_KEY_BLOCK_USER_WALLET, payload);
+        send(KafkaTopicConfig.TOPIC_BLOCK_USER_WALLET, email, payload);
     }
 
     @Override
@@ -108,7 +106,7 @@ public class WalletNotificationMessageProducer implements IWalletNotificationPub
         payload.setActionTime(eventTime);
         payload.setIpAddress(ipAddress);
         payload.setDeviceInfo(deviceInfo);
-        send(RabbitMQConfig.WALLET_EXCHANGE, RabbitMQConfig.ROUTING_KEY_WALLET_PIN_ALERT, payload);
+        send(KafkaTopicConfig.TOPIC_WALLET_PIN_ALERT, email, payload);
     }
 
     @Override
@@ -128,7 +126,7 @@ public class WalletNotificationMessageProducer implements IWalletNotificationPub
         payload.setDebtAmount(debtAmount);
         payload.setWalletBalance(walletBalance);
         payload.setBillingMonth(billingMonth);
-        send(RabbitMQConfig.WALLET_EXCHANGE, RabbitMQConfig.ROUTING_KEY_MAINTENANCE_DEBT, payload);
+        send(KafkaTopicConfig.TOPIC_MAINTENANCE_DEBT, userEmail, payload);
     }
 
     @Override
@@ -147,21 +145,25 @@ public class WalletNotificationMessageProducer implements IWalletNotificationPub
         payload.setRemainingDebt(remainingDebt);
         payload.setNewWalletBalance(newWalletBalance);
         payload.setFullySettled(fullySettled);
-        send(RabbitMQConfig.WALLET_EXCHANGE, RabbitMQConfig.ROUTING_KEY_MAINTENANCE_DEBT, payload);
+        send(KafkaTopicConfig.TOPIC_MAINTENANCE_DEBT, userEmail, payload);
     }
 
     public void sendAccountStatement(String email, String period, String username, byte[] pdfBytes) {
-        send(RabbitMQConfig.ACCOUNT_EXCHANGE, RabbitMQConfig.ROUTING_KEY_ACCOUNT_STATEMENT,
+        send(KafkaTopicConfig.TOPIC_ACCOUNT_STATEMENT, email,
                 new StatementPayload(email, username, pdfBytes, period));
     }
 
-    private void send(String exchange, String routingKey, Object payload) {
-        try {
-            rabbitTemplate.convertAndSend(exchange, routingKey, payload);
-        } catch (AmqpException e) {
-            log.error("[WalletNotification] Failed to publish {}/{}: {}", exchange, routingKey, e.getMessage());
-            throw e;
-        }
+    private void send(String topic, String key, Object payload) {
+        kafkaTemplate.send(topic, key, payload)
+                .whenComplete((result, ex) -> {
+                    if (ex != null) {
+                        log.error("[WalletNotification] Failed to publish to topic={}: {}", topic, ex.getMessage());
+                    } else {
+                        log.info("[WalletNotification] Published to topic={} partition={} offset={}",
+                                topic,
+                                result.getRecordMetadata().partition(),
+                                result.getRecordMetadata().offset());
+                    }
+                });
     }
-
 }

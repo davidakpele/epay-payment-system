@@ -108,23 +108,68 @@ services:
         max-size: "50m"
         max-file: "3"
 
-  rabbitmq:
-    image: rabbitmq:3.13-management-alpine
-    container_name: epay-rabbitmq
-    ports:
-      - "5672:5672"
-      - "15672:15672"
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.1
+    container_name: epay-zookeeper
     environment:
-      RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: guest
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
     volumes:
-      - rabbitmq_data:/var/lib/rabbitmq
+      - zookeeper_data:/var/lib/zookeeper/data
+      - zookeeper_logs:/var/lib/zookeeper/log
     healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      test:
+        [
+          "CMD",
+          "bash",
+          "-c",
+          "echo ruok | timeout 2 bash -c 'cat > /dev/tcp/localhost/2181' && echo ok",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - epay-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "3"
+
+  kafka:
+    image: confluentinc/cp-kafka:7.6.1
+    container_name: epay-kafka
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    # Port 9092 is NOT exposed to the host — all internal clients use kafka:29092.
+    # Exposing it caused HTTP probes from the host to hit Kafka's binary port,
+    # producing InvalidReceiveException spam. Remove the mapping to stop that.
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,PLAINTEXT_HOST://0.0.0.0:9092
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_LOG_RETENTION_HOURS: 168
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "kafka-broker-api-versions --bootstrap-server localhost:9092",
+        ]
       interval: 10s
       timeout: 10s
       retries: 10
-      start_period: 60s
+      start_period: 40s
     restart: unless-stopped
     networks:
       - epay-network
@@ -132,6 +177,26 @@ services:
       driver: "json-file"
       options:
         max-size: "50m"
+        max-file: "3"
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: epay-kafka-ui
+    ports:
+      - "8090:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: epay-kafka
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+    depends_on:
+      kafka:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - epay-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
         max-file: "3"
 
   zipkin:
@@ -162,10 +227,8 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/epay
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      SPRING_RABBITMQ_HOST: rabbitmq
-      SPRING_RABBITMQ_PORT: 5672
-      SPRING_RABBITMQ_USERNAME: ${SPRING_RABBITMQ_USERNAME:-guest}
-      SPRING_RABBITMQ_PASSWORD: ${SPRING_RABBITMQ_PASSWORD:-guest}
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      KAFKA_LISTENER_CONCURRENCY: 3
       JWT_SECRET: ${JWT_SECRET:-dGhpcy1pcy1hLXNlY3VyZS1kZXYtb25seS1zZWNyZXQta2V5LTMyLWJ5dGVzLWxvbmchISE=}
       SERVER_PORT: 8029
       PAYSTACK_SECRET_KEY: ${PAYSTACK_SECRET_KEY:-}
@@ -194,15 +257,12 @@ services:
       SPRING_REDIS_LETTUCE_POOL_MAX-ACTIVE: 20
       SPRING_REDIS_LETTUCE_POOL_MAX-IDLE: 10
       SPRING_REDIS_LETTUCE_POOL_MIN-IDLE: 5
-      SPRING_RABBITMQ_LISTENER_SIMPLE_CONCURRENCY: 3
-      SPRING_RABBITMQ_LISTENER_SIMPLE_MAX-CONCURRENCY: 10
-      SPRING_RABBITMQ_LISTENER_SIMPLE_PREFETCH: 5
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-      rabbitmq:
+      kafka:
         condition: service_healthy
     healthcheck:
       test:
@@ -472,7 +532,7 @@ services:
       GMAIL_APP_PASSWORD: ${GMAIL_APP_PASSWORD:-}
       ALERT_FROM_EMAIL: ${ALERT_FROM_EMAIL:-alerts@epay.app}
       ALERT_EMAIL_TEAM: ${ALERT_EMAIL_TEAM:-team@epay.app}
-      ALERT_EMAIL_CRITICAL: ${ALERT_EMAIL_CRITICAL:-oncall@epay.app}
+      ALERT_EMAIL_CRITICAL: ${ALERT_EMAIL_CRITICAL:-willstonestrategic@gmail.com}
       ALERT_EMAIL_PAYMENTS: ${ALERT_EMAIL_PAYMENTS:-payments-team@epay.app}
       SLACK_WEBHOOK_URL: ${SLACK_WEBHOOK_URL:-}
     healthcheck:
@@ -547,7 +607,11 @@ volumes:
     driver: local
   redis_data:
     driver: local
-  rabbitmq_data:
+  zookeeper_data:
+    driver: local
+  zookeeper_logs:
+    driver: local
+  kafka_data:
     driver: local
   app_uploads:
     driver: local
