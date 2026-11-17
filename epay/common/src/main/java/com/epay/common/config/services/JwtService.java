@@ -255,15 +255,43 @@ public class JwtService implements IJwtService {
                                        String sessionId,
                                        String tokenId) {
         try {
+            List<String> roles = extractRoleNames(userDetails);
+            String assurance = resolveAssurance(List.of("PASSWORD"));
+
             Map<String, Object> claims = new LinkedHashMap<>();
+            claims.put("jti", tokenId);
+            claims.put("sid", sessionId);
+
+            claims.put("principal", Map.of(
+                "auth", buildPrincipalAuth(roles)
+            ));
+            claims.put("roles", roles);
+            claims.put("permissions", buildPermissions(roles));
+
+            if (userDetails instanceof User user) {
+                Long userId = user.getId();
+                claims.put("userId",        userId);
+                claims.put("accountId",     buildAccountId(userId));
+                claims.put("accountStatus", resolveAccountStatus(user));
+                claims.put("kycLevel",      resolveKycLevel(user.getKycTier()));
+            }
+
+            claims.put("amr", buildAmr(List.of("PASSWORD")));
+            claims.put("acr", resolveAcr(List.of("PASSWORD")));
+            claims.put("auth_time", Instant.now().getEpochSecond());
+
+            claims.put("auth", Map.of(
+                "methods",  List.of("PASSWORD"),
+                "assurance", assurance
+            ));
             claims.put("session", Map.of(
                 "id",       sessionId,
                 "token_id", tokenId
             ));
             claims.put("token", Map.of("type", "REFRESH"));
 
-            String sub = resolveSubject(userDetails);
-            Instant now = Instant.now();
+            String sub    = resolveSubject(userDetails);
+            Instant now   = Instant.now();
             Instant expiry = now.plus(jwtProperties.getRefreshExpirationDays(), ChronoUnit.DAYS);
 
             return Jwts.builder()

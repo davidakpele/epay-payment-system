@@ -10,11 +10,11 @@ import React, {
 
 import DateFilterModal from "@/components/DateFilterModal";
 import DepositModal from "@/components/DepositModal";
-import Footer from "@/components/Footer";
 import Header from "@/components/Header";
 import LoadingScreen from "@/components/loader/Loadingscreen";
 import MobileNav from "@/components/MobileNav";
 import Sidebar from "@/components/Sidebar";
+import RightPanel from "@/components/RightPanel";
 import SupportChatBot from "@/components/SupportChatBot";
 import WithdrawModal from "@/components/WithdrawModal";
 import {
@@ -1226,9 +1226,9 @@ const Wallet = () => {
               theme={theme}
             />
           )}
-          <Footer theme={theme} />
         </div>
       </main>
+      <RightPanel theme={theme} />
 
       {isModalOpen && (
         <div

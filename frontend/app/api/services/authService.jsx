@@ -19,8 +19,10 @@ export const authService = {
     return makePublicRequest(API_URLS.AUTH.LOGOUT(id), "GET");
   },
 
-  refreshToken: () => {
-    return makePublicRequest(API_URLS.AUTH.REFRESH_TOKEN, "POST");
+  refreshToken: (refreshToken) => {
+    return makePublicRequest(API_URLS.AUTH.REFRESH_TOKEN, "POST", {
+      refreshToken,
+    });
   },
 
   verifyToken: (token) => {
@@ -48,12 +50,10 @@ export const authService = {
 
   forgotPassword: (payload) => {
     console.log("Forgot password payload:", payload);
-    // return makePublicRequest(API_URLS.AUTH.VERIFYOTP, 'POST', payload);
   },
 
   forgotUsername: (payload) => {
     console.log("Forgot username payload:", payload);
-    // return makePublicRequest(API_URLS.AUTH.VERIFYOTP, 'POST', payload);
   },
 };
 

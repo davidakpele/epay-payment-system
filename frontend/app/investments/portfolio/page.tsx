@@ -21,7 +21,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
-import Footer from "@/components/Footer";
+import RightPanel from "@/components/RightPanel";
 import MobileNav from "@/components/MobileNav";
 import DepositModal from "@/components/DepositModal";
 import LoadingScreen from "@/components/loader/Loadingscreen";
@@ -905,9 +905,9 @@ export default function MyInvestmentsPage() {
             </div>
           </div>
 
-          <Footer theme={theme} />
         </div>
       </main>
+      <RightPanel theme={theme} />
 
       {/* Detail modal */}
       {showDetailModal && (

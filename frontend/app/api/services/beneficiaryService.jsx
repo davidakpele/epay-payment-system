@@ -26,9 +26,9 @@ export const beneficiaryService = {
     );
   },
 
-  deleteBeneficiary: (beneficiaryId) => {
+  deleteBeneficiary: (beneficiaryId, userId) => {
     return makeAuthenticatedRequest(
-      API_URLS.BENEFICIARY.DELETE(beneficiaryId),
+      API_URLS.BENEFICIARY.DELETE(beneficiaryId, userId),
       "DELETE",
     );
   },

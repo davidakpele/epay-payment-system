@@ -1,0 +1,611 @@
+.beneficiary-transfer-page {
+  width: min(100%, 1000px);
+  margin: 0 auto;
+  padding: 20px 20px 56px;
+  color: #27262e;
+}
+
+.beneficiary-transfer-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 18px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #55545d;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.beneficiary-transfer-page > h1 {
+  margin: 0 0 22px;
+  color: #27262e;
+  font-size: 27px;
+  font-weight: 700;
+}
+
+.beneficiary-transfer-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  align-items: start;
+  gap: 18px;
+}
+
+.beneficiary-transfer-card,
+.beneficiary-transfer-summary {
+  border: 1px solid #e8e7eb;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.beneficiary-transfer-card {
+  padding: 22px;
+}
+
+.beneficiary-transfer-recipient {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  margin-bottom: 24px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid #eeedf0;
+}
+
+.beneficiary-transfer-avatar {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  place-items: center;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--bg-main) 10%, white);
+  color: var(--bg-main);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.beneficiary-transfer-recipient div {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 5px;
+}
+
+.beneficiary-transfer-recipient strong {
+  color: #27262e;
+  font-size: 14px;
+}
+
+.beneficiary-transfer-recipient span:last-child {
+  overflow: hidden;
+  color: #85848d;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.beneficiary-transfer-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 17px;
+  color: #696872;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.beneficiary-transfer-field input,
+.beneficiary-transfer-field select {
+  width: 100%;
+  height: 44px;
+  padding: 0 12px;
+  border: 1px solid #e3e2e7;
+  border-radius: 7px;
+  outline: none;
+  background: #faf9fb;
+  color: #27262e;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.beneficiary-transfer-field input:focus,
+.beneficiary-transfer-field select:focus {
+  border-color: var(--bg-main);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--bg-main) 12%, transparent);
+}
+
+.beneficiary-transfer-field small {
+  color: #85848d;
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.beneficiary-transfer-amount {
+  display: flex;
+  align-items: center;
+  height: 44px;
+  padding-left: 12px;
+  border: 1px solid #e3e2e7;
+  border-radius: 7px;
+  background: #faf9fb;
+  color: #777680;
+  font-size: 14px;
+}
+
+.beneficiary-transfer-amount:focus-within {
+  border-color: var(--bg-main);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--bg-main) 12%, transparent);
+}
+
+.beneficiary-transfer-amount input {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.beneficiary-transfer-submit {
+  width: 100%;
+  min-height: 44px;
+  margin-top: 3px;
+  border: 0;
+  border-radius: 7px;
+  background: var(--bg-main);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.beneficiary-transfer-submit:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.beneficiary-transfer-summary {
+  padding: 20px;
+}
+
+.beneficiary-transfer-summary-icon {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--bg-main) 10%, white);
+  color: var(--bg-main);
+}
+
+.beneficiary-transfer-summary h2 {
+  margin: 14px 0 16px;
+  color: #27262e;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.beneficiary-transfer-summary dl {
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+  margin: 0;
+}
+
+.beneficiary-transfer-summary dl div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.beneficiary-transfer-summary dt {
+  color: #85848d;
+  font-size: 11px;
+}
+
+.beneficiary-transfer-summary dd {
+  margin: 0;
+  color: #34333b;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.beneficiary-transfer-summary > button,
+.beneficiary-transfer-state button {
+  margin-top: 18px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--bg-main);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.beneficiary-transfer-message {
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  border: 1px solid;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.beneficiary-transfer-message--error {
+  border-color: #f1c7c4;
+  background: #fff4f3;
+  color: #9c2f2a;
+}
+
+.beneficiary-transfer-message--success {
+  border-color: #c6e7d2;
+  background: #f0faf4;
+  color: #20754a;
+}
+
+.beneficiary-transfer-state {
+  padding: 40px 18px;
+  color: #777680;
+  text-align: center;
+}
+
+.beneficiary-transfer-state p {
+  margin: 0;
+}
+
+.dark .beneficiary-transfer-page,
+.dark .beneficiary-transfer-page > h1,
+.dark .beneficiary-transfer-recipient strong,
+.dark .beneficiary-transfer-summary h2,
+.dark .beneficiary-transfer-summary dd {
+  color: #f3f1f7;
+}
+
+.dark .beneficiary-transfer-back,
+.dark .beneficiary-transfer-recipient span:last-child,
+.dark .beneficiary-transfer-field,
+.dark .beneficiary-transfer-field small,
+.dark .beneficiary-transfer-summary dt {
+  color: #aaa6b5;
+}
+
+.dark .beneficiary-transfer-card,
+.dark .beneficiary-transfer-summary {
+  border-color: #393541;
+  background: #211e28;
+}
+
+.dark .beneficiary-transfer-field input,
+.dark .beneficiary-transfer-field select,
+.dark .beneficiary-transfer-amount {
+  border-color: #393541;
+  background: #292531;
+  color: #f3f1f7;
+}
+
+.dark .beneficiary-transfer-amount input {
+  background: transparent;
+}
+
+@media (max-width: 760px) {
+  .beneficiary-transfer-page {
+    padding: 16px 0 42px;
+  }
+
+  .beneficiary-transfer-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .beneficiary-transfer-page > h1 {
+    font-size: 23px;
+  }
+
+  .beneficiary-transfer-card {
+    padding: 16px;
+  }
+}
+
+.beneficiary-transfer-page {
+  width: min(100%, 1490px);
+  margin: 0;
+  padding: 18px 20px 56px;
+}
+
+.beneficiary-transfer-page > h1 {
+  margin-bottom: 22px;
+  font-size: 23px;
+}
+
+.beneficiary-transfer-layout {
+  grid-template-columns: minmax(0, 1fr) 232px;
+  gap: 16px;
+}
+
+.beneficiary-transfer-card {
+  padding: 18px;
+}
+
+.beneficiary-transfer-field {
+  gap: 6px;
+  margin-bottom: 15px;
+  font-weight: 500;
+}
+
+.beneficiary-transfer-field input,
+.beneficiary-transfer-field select {
+  height: 42px;
+  border-radius: 7px;
+  background: #f7f7f8;
+}
+
+.beneficiary-transfer-field input[readonly] {
+  color: #24232a;
+}
+
+.beneficiary-transfer-balance {
+  margin: 1px 0 20px;
+}
+
+.beneficiary-transfer-balance-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 7px;
+  color: #696872;
+  font-size: 12px;
+}
+
+.beneficiary-transfer-balance-row strong {
+  color: #27262e;
+  font-weight: 600;
+}
+
+.beneficiary-transfer-balance-track {
+  height: 5px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e7e6e9;
+}
+
+.beneficiary-transfer-balance-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--bg-main);
+  transition: width 180ms ease;
+}
+
+.beneficiary-transfer-balance-row--caption {
+  margin: 6px 0 0;
+  color: #777680;
+  font-size: 11px;
+}
+
+.beneficiary-transfer-section-label {
+  margin: 0 0 10px;
+  color: #55545d;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.beneficiary-transfer-frequent {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  margin: 0 0 17px;
+  padding: 0 0 4px;
+  scrollbar-width: thin;
+}
+
+.beneficiary-transfer-frequent-tile {
+  display: flex;
+  flex: 0 0 64px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 68px;
+  padding: 6px 3px;
+  border: 1px solid #e8e7eb;
+  border-radius: 7px;
+  background: #fff;
+  color: #27262e;
+  cursor: pointer;
+}
+
+.beneficiary-transfer-frequent-tile > span {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border-radius: 50%;
+  background: #e9e8ea;
+  color: #27262e;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.beneficiary-transfer-frequent-tile small {
+  max-width: 58px;
+  overflow: hidden;
+  color: #55545d;
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.beneficiary-transfer-frequent-tile--all > span {
+  border: 1px solid #55545d;
+  background: #fff;
+  color: var(--bg-main);
+}
+
+.beneficiary-transfer-frequent-tile--active {
+  border-color: var(--bg-main);
+  box-shadow: inset 0 0 0 1px var(--bg-main);
+}
+
+.beneficiary-transfer-account-name {
+  align-self: flex-end;
+  color: #5f5e68 !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase;
+}
+
+.beneficiary-transfer-submit {
+  min-height: 40px;
+  border-radius: 7px;
+  background: var(--bg-main);
+}
+
+.beneficiary-transfer-submit:disabled {
+  background: #a4a3a6;
+}
+
+.beneficiary-transfer-secure {
+  overflow: hidden;
+  border: 1px solid #e8e7eb;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.beneficiary-transfer-secure-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 56px;
+  padding: 0 15px;
+  background: var(--bg-main);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.beneficiary-transfer-secure-heading span {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border-radius: 8px;
+  background: rgb(255 255 255 / 15%);
+}
+
+.beneficiary-transfer-secure ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.beneficiary-transfer-secure li {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  min-height: 62px;
+  padding: 14px 14px 11px;
+  border-bottom: 1px solid #eeedf0;
+}
+
+.beneficiary-transfer-step-icon {
+  display: grid;
+  width: 19px;
+  height: 22px;
+  flex: 0 0 19px;
+  place-items: center;
+  color: var(--bg-main);
+  font-size: 14px;
+}
+
+.beneficiary-transfer-secure li > span:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.beneficiary-transfer-secure li strong {
+  color: #27262e;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.beneficiary-transfer-secure li small {
+  color: #85848d;
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.beneficiary-transfer-secure-note {
+  display: flex;
+  gap: 8px;
+  margin: 0;
+  padding: 13px 14px;
+  color: #85848d;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.beneficiary-transfer-secure-note i {
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
+.dark .beneficiary-transfer-field input,
+.dark .beneficiary-transfer-field select {
+  background: #292531;
+}
+
+.dark .beneficiary-transfer-field input[readonly],
+.dark .beneficiary-transfer-balance-row strong,
+.dark .beneficiary-transfer-secure li strong {
+  color: #f3f1f7;
+}
+
+.dark .beneficiary-transfer-frequent-tile,
+.dark .beneficiary-transfer-secure {
+  border-color: #393541;
+  background: #211e28;
+}
+
+.dark .beneficiary-transfer-frequent-tile small,
+.dark .beneficiary-transfer-section-label,
+.dark .beneficiary-transfer-balance-row,
+.dark .beneficiary-transfer-balance-row--caption,
+.dark .beneficiary-transfer-secure li small,
+.dark .beneficiary-transfer-secure-note {
+  color: #aaa6b5;
+}
+
+.dark .beneficiary-transfer-frequent-tile > span {
+  background: #393541;
+  color: #f3f1f7;
+}
+
+.dark .beneficiary-transfer-frequent-tile--all > span {
+  border-color: #aaa6b5;
+  background: #211e28;
+  color: #f3f1f7;
+}
+
+.dark .beneficiary-transfer-secure li {
+  border-color: #393541;
+}
+
+@media (max-width: 760px) {
+  .beneficiary-transfer-page {
+    margin-bottom: 42px;
+    padding: 16px 0 42px;
+  }
+
+}
+
+@media (max-width: 1000px) {
+  .beneficiary-transfer-secure {
+    order: 2;
+    display: none !important;
+    visibility: hidden !important;
+  }
+   .beneficiary-transfer-layout {
+    grid-template-columns: 1fr;
+  }
+}

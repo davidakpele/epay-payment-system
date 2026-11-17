@@ -16,10 +16,10 @@ import {
 import Link from "next/link";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
-import Footer from "@/components/Footer";
 import MobileNav from "@/components/MobileNav";
 import DepositModal from "@/components/DepositModal";
 import LoadingScreen from "@/components/loader/Loadingscreen";
+import RightPanel from "@/components/RightPanel";
 import SupportChatBot from "@/components/SupportChatBot";
 import { Toast } from "@/app/types/auth";
 import {
@@ -960,10 +960,9 @@ export default function InvestmentsPage() {
               </div>
             </div>
           </div>
-
-          <Footer theme={theme} />
         </div>
       </main>
+      <RightPanel theme={theme} />
       {/* Currency selection modal — same pattern as dashboard */}
       {isModalOpen && (
         <div

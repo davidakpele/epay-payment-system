@@ -43,7 +43,7 @@ export interface UserData {
   isPinSet?: boolean | string;
   fiat?: string;
   notifications?: UserNotification[];
-  _jwt_?: { jwt: string };
+  _jwt_?: { jwt: string; refreshToken?: string };
 }
 
 export interface StorageData {

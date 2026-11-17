@@ -4,7 +4,6 @@ import com.epay.auth.interfaces.IUserTracerService;
 import com.epay.domain.auth.entity.User;
 import com.epay.domain.auth.entity.UserTracer;
 import com.epay.domain.auth.enums.AttemptType;
-import com.epay.domain.auth.repository.UserTracerRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -18,12 +17,11 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class UserTracerService implements IUserTracerService {
 
-    private static final Duration SESSION_TTL = Duration.ofHours(12);
+    private static final Duration SESSION_TTL = Duration.ofMinutes(5);
     private static final String   KEY_ACTIVE  = "session:active:";
     private static final String   KEY_BY_ID   = "session:id:";
 
-    private final UserTracerRepository             tracerRepository;
-    private final RedisTemplate<String, Object>    redisTemplate;
+    private final RedisTemplate<String, Object> redisTemplate;
 
     @Override
     public boolean hasActiveSession(Long userId) {
@@ -50,8 +48,6 @@ public class UserTracerService implements IUserTracerService {
                 .createdAt(now)
                 .expiresAt(expires)
                 .build();
-
-        tracerRepository.save(tracer);
 
         try {
             redisTemplate.opsForValue().set(KEY_ACTIVE + user.getId(), sessionId, SESSION_TTL);
@@ -89,8 +85,9 @@ public class UserTracerService implements IUserTracerService {
         } catch (Exception e) {
             log.warn("[Session] Redis deleteByUser failed for userId={}: {}", userId, e.getMessage());
         }
-        log.info("[Session] Deleted all sessions for userId={}", userId);
+        log.info("[Session] Cleared session for userId={}", userId);
     }
+
     @Override
     public boolean isSessionValid(String sessionId) {
         try {
@@ -98,6 +95,16 @@ public class UserTracerService implements IUserTracerService {
         } catch (Exception e) {
             log.warn("[Session] Redis validity check failed for sessionId={}: {}", sessionId, e.getMessage());
             return true;
+        }
+    }
+
+    @Override
+    public void renewSession(String sessionId, Long userId) {
+        try {
+            redisTemplate.expire(KEY_ACTIVE + userId, SESSION_TTL);
+            redisTemplate.expire(KEY_BY_ID  + sessionId, SESSION_TTL);
+        } catch (Exception e) {
+            log.warn("[Session] Redis renew failed for sessionId={}: {}", sessionId, e.getMessage());
         }
     }
 }

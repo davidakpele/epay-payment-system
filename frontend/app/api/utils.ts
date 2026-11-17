@@ -29,10 +29,11 @@ export const getAuthHeader = (): Record<string, string> => {
 };
 
 export const setAuthToken = (
-  payload: Partial<UserData> & { token?: string } = {},
+  payload: Partial<UserData> & { token?: string; refreshToken?: string } = {},
 ) => {
   const {
     token = "",
+    refreshToken = "",
     username = "",
     userId = "",
     email = "",
@@ -81,7 +82,7 @@ export const setAuthToken = (
       isCompleteProfile,
       sessionId,
       userFullName: fullname,
-      _jwt_: { jwt: token },
+      _jwt_: { jwt: token, refreshToken },
     },
   };
 
@@ -157,6 +158,24 @@ const updateStorage = (updater: (user: UserData) => void) => {
   localStorage.setItem("data", updatedData);
   sessionStorage.setItem("data", updatedData);
   document.cookie = `data=${encodeURIComponent(updatedData)}; path=/; samesite=Lax`;
+};
+
+export const getRefreshToken = (): string | null => {
+  try {
+    const data = localStorage.getItem("data");
+    if (!data) return null;
+    const appData: StorageData = JSON.parse(data);
+    return appData.user?._jwt_?.refreshToken || null;
+  } catch {
+    return null;
+  }
+};
+
+export const updateJwtTokens = (jwt: string, refreshToken: string) => {
+  updateStorage((user) => {
+    user._jwt_ = { jwt, refreshToken };
+  });
+  document.cookie = `jwt=${jwt}; path=/; samesite=Lax`;
 };
 
 export const setActiveWallet = (currency: string) => {

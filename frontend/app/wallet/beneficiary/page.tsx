@@ -1,15 +1,15 @@
 "use client";
 
+import { beneficiaryService, getUserId, historyService } from "@/app/api";
 import DepositModal from "@/components/DepositModal";
-import Footer from "@/components/Footer";
 import Header from "@/components/Header";
+import LoadingScreen from "@/components/loader/Loadingscreen";
 import MobileNav from "@/components/MobileNav";
 import Sidebar from "@/components/Sidebar";
-import { useState, useMemo, useEffect } from "react";
-import "./BeneficiaryManager.css";
-import LoadingScreen from "@/components/loader/Loadingscreen";
-import { beneficiaryService, getUserId, historyService } from "@/app/api";
 import SupportChatBot from "@/components/SupportChatBot";
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import "./BeneficiaryManager.css";
 
 interface Transaction {
   id: string | number;
@@ -45,11 +45,26 @@ interface Beneficiary {
 }
 
 const BeneficiaryManager = () => {
+  const router = useRouter();
   const [isDepositOpen, setIsDepositOpen] = useState(false);
   const [theme, setTheme] = useState<"light" | "dark">("light");
-  const [activeFilter, setActiveFilter] = useState("all");
+  const [activeFilter, setActiveFilter] = useState("transfer");
   const [searchQuery, setSearchQuery] = useState("");
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [expandedBeneficiaryId, setExpandedBeneficiaryId] = useState<
+    number | null
+  >(null);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [isCreatingBeneficiary, setIsCreatingBeneficiary] = useState(false);
+  const [addForm, setAddForm] = useState({
+    beneficiaryType: "BANK" as "BANK" | "USER",
+    beneficiaryName: "",
+    currency: "NGN",
+    accountNumber: "",
+    accountName: "",
+    bankCode: "",
+    bankName: "",
+    recipientUsername: "",
+  });
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [selectedBeneficiary, setSelectedBeneficiary] =
     useState<Beneficiary | null>(null);
@@ -60,6 +75,18 @@ const BeneficiaryManager = () => {
     null,
   );
   const [beneficiaries, setBeneficiaries] = useState<Beneficiary[]>([]);
+  const [editingBeneficiary, setEditingBeneficiary] =
+    useState<Beneficiary | null>(null);
+  const [editForm, setEditForm] = useState({
+    beneficiaryName: "",
+    accountNumber: "",
+    accountName: "",
+    bankCode: "",
+    bankName: "",
+    recipientUsername: "",
+    currency: "NGN",
+  });
+  const [isSavingBeneficiary, setIsSavingBeneficiary] = useState(false);
   const [isLoadingBeneficiaries, setIsLoadingBeneficiaries] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -128,8 +155,8 @@ const BeneficiaryManager = () => {
     try {
       const userId = getUserId();
       if (!userId) throw new Error("User not authenticated");
-      await beneficiaryService.deleteBeneficiary(id);
-      setBeneficiaries(beneficiaries.filter((b) => b.id !== id));
+      await beneficiaryService.deleteBeneficiary(id, userId);
+      setBeneficiaries((current) => current.filter((b) => b.id !== id));
       setShowDeleteConfirm(false);
       setBeneficiaryToDelete(null);
     } catch (err: any) {
@@ -159,18 +186,18 @@ const BeneficiaryManager = () => {
 
   const filteredBeneficiaries = useMemo(() => {
     return beneficiaries.filter((b) => {
-      const matchesTab = activeFilter === "all" || b.category === activeFilter;
+      const matchesTab =
+        activeFilter === "transfer"
+          ? b.beneficiaryType === "USER" || b.currency.toUpperCase() === "NGN"
+          : activeFilter === "fcy"
+            ? b.beneficiaryType === "BANK" && b.currency.toUpperCase() !== "NGN"
+            : false;
       const matchesSearch =
         b.beneficiaryName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         b.detail.toLowerCase().includes(searchQuery.toLowerCase());
       return matchesTab && matchesSearch;
     });
   }, [activeFilter, searchQuery, beneficiaries]);
-
-  const getCategoryCount = (category: string) => {
-    if (category === "all") return beneficiaries.length;
-    return beneficiaries.filter((b) => b.category === category).length;
-  };
 
   const openHistoryModal = async (beneficiary: Beneficiary) => {
     try {
@@ -240,24 +267,171 @@ const BeneficiaryManager = () => {
     if (beneficiaryToDelete) deleteBeneficiary(beneficiaryToDelete);
   };
 
-  const frequentBeneficiaries = useMemo(() => {
-    return [...beneficiaries]
-      .sort(
-        (a, b) =>
-          new Date(b.createdOn).getTime() - new Date(a.createdOn).getTime(),
-      )
-      .slice(0, 5);
-  }, [beneficiaries]);
+  const groupedBeneficiaries = useMemo(() => {
+    const groups = new Map<string, Beneficiary[]>();
+    for (const beneficiary of filteredBeneficiaries) {
+      const nameParts = beneficiary.beneficiaryName.trim().split(/\s+/);
+      const letter = (
+        nameParts[nameParts.length - 1]?.charAt(0) ||
+        nameParts[0]?.charAt(0) ||
+        "#"
+      ).toUpperCase();
+      const key = letter || "#";
+      groups.set(key, [...(groups.get(key) ?? []), beneficiary]);
+    }
+    return [...groups.entries()].sort(([a], [b]) => a.localeCompare(b));
+  }, [filteredBeneficiaries]);
 
-  const getGradientColor = (index: number) => {
-    const colors = [
-      "bg-gradient-to-br from-orange-400 to-orange-600",
-      "bg-gradient-to-br from-blue-400 to-blue-600",
-      "bg-gradient-to-br from-purple-400 to-purple-600",
-      "bg-gradient-to-br from-pink-400 to-pink-600",
-      "bg-gradient-to-br from-indigo-400 to-indigo-600",
-    ];
-    return colors[index % colors.length];
+  const openEditModal = (beneficiary: Beneficiary) => {
+    setEditingBeneficiary(beneficiary);
+    setEditForm({
+      beneficiaryName: beneficiary.beneficiaryName,
+      accountNumber: beneficiary.accountNumber ?? "",
+      accountName: beneficiary.accountName ?? "",
+      bankCode: beneficiary.bankCode ?? "",
+      bankName: beneficiary.bankName ?? "",
+      recipientUsername: beneficiary.recipientUsername ?? "",
+      currency: beneficiary.currency ?? "NGN",
+    });
+  };
+
+  const saveBeneficiary = async () => {
+    if (!editingBeneficiary) return;
+    const userId = getUserId();
+    if (!userId) {
+      setError("User not authenticated");
+      return;
+    }
+    if (!editForm.beneficiaryName.trim()) {
+      setError("Enter a beneficiary name");
+      return;
+    }
+    if (
+      editingBeneficiary.beneficiaryType === "BANK" &&
+      (!editForm.accountNumber.trim() ||
+        !editForm.accountName.trim() ||
+        !editForm.bankCode.trim() ||
+        !editForm.bankName.trim())
+    ) {
+      setError("Complete all bank account details");
+      return;
+    }
+    if (
+      editingBeneficiary.beneficiaryType === "USER" &&
+      !editForm.recipientUsername.trim()
+    ) {
+      setError("Enter an ePay username");
+      return;
+    }
+
+    setIsSavingBeneficiary(true);
+    setError(null);
+    try {
+      const payload = {
+        userId,
+        beneficiaryType: editingBeneficiary.beneficiaryType,
+        beneficiaryName: editForm.beneficiaryName.trim(),
+        currency: editForm.currency.trim().toUpperCase(),
+        ...(editingBeneficiary.beneficiaryType === "BANK"
+          ? {
+              accountNumber: editForm.accountNumber.trim(),
+              accountName: editForm.accountName.trim(),
+              bankCode: editForm.bankCode.trim(),
+              bankName: editForm.bankName.trim(),
+            }
+          : { recipientUsername: editForm.recipientUsername.trim() }),
+      };
+      await beneficiaryService.updateBeneficiary(
+        editingBeneficiary.id,
+        payload,
+      );
+      setBeneficiaries((current) =>
+        current.map((beneficiary) =>
+          beneficiary.id === editingBeneficiary.id
+            ? formatBeneficiary({ ...beneficiary, ...payload })
+            : beneficiary,
+        ),
+      );
+      setEditingBeneficiary(null);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to update beneficiary",
+      );
+    } finally {
+      setIsSavingBeneficiary(false);
+    }
+  };
+
+  const createBeneficiary = async () => {
+    const userId = getUserId();
+    if (!userId) {
+      setError("User not authenticated");
+      return;
+    }
+    if (!addForm.beneficiaryName.trim()) {
+      setError("Enter a beneficiary name");
+      return;
+    }
+    if (
+      addForm.beneficiaryType === "BANK" &&
+      (!addForm.accountNumber.trim() ||
+        !addForm.accountName.trim() ||
+        !addForm.bankCode.trim() ||
+        !addForm.bankName.trim())
+    ) {
+      setError("Complete all bank account details");
+      return;
+    }
+    if (
+      addForm.beneficiaryType === "USER" &&
+      !addForm.recipientUsername.trim()
+    ) {
+      setError("Enter an ePay username");
+      return;
+    }
+
+    setIsCreatingBeneficiary(true);
+    setError(null);
+    try {
+      await beneficiaryService.saveBeneficiary({
+        userId,
+        beneficiaryType: addForm.beneficiaryType,
+        beneficiaryName: addForm.beneficiaryName.trim(),
+        currency: addForm.currency.trim().toUpperCase(),
+        ...(addForm.beneficiaryType === "BANK"
+          ? {
+              accountNumber: addForm.accountNumber.trim(),
+              accountName: addForm.accountName.trim(),
+              bankCode: addForm.bankCode.trim(),
+              bankName: addForm.bankName.trim(),
+            }
+          : { recipientUsername: addForm.recipientUsername.trim() }),
+      });
+      await fetchBeneficiaries();
+      setShowAddModal(false);
+      setAddForm({
+        beneficiaryType: "BANK",
+        beneficiaryName: "",
+        currency: "NGN",
+        accountNumber: "",
+        accountName: "",
+        bankCode: "",
+        bankName: "",
+        recipientUsername: "",
+      });
+    } catch (createError) {
+      setError(
+        createError instanceof Error
+          ? createError.message
+          : "Failed to add beneficiary",
+      );
+    } finally {
+      setIsCreatingBeneficiary(false);
+    }
+  };
+
+  const transferToBeneficiary = (beneficiary: Beneficiary) => {
+    router.push(`/beneficiary-transfer?beneficiaryId=${beneficiary.id}`);
   };
 
   const isCredit = (type: string) =>
@@ -273,368 +447,366 @@ const BeneficiaryManager = () => {
   if (isPageLoading) return <LoadingScreen />;
 
   return (
-    <div className="dashboard-container">
+    <div
+      className={`dashboard-container no-right-panel${theme === "dark" ? " dark" : ""}`}
+    >
       <Sidebar />
       <main className={`main-content ${isDepositOpen ? "blur-sm" : ""}`}>
         <Header theme={theme} toggleTheme={toggleTheme} />
         <div className="scrollable-content">
           <div className="pt-20 px-4 sm:px-6 lg:px-8">
-            <div className="max-w-7xl mx-auto w-full">
-              {/* Error Message */}
+            <section className="beneficiary-page">
+              <button
+                className="beneficiary-back"
+                type="button"
+                onClick={() => router.back()}
+              >
+                <i className="fas fa-chevron-left" aria-hidden="true"></i>
+                Back
+              </button>
+              <div className="beneficiary-heading">
+                <h1>Beneficiaries</h1>
+              </div>
+
               {error && (
-                <div className="bg-red-50 border-2 border-red-200 rounded-2xl p-4 mb-6 flex items-center gap-3">
-                  <i className="fas fa-exclamation-circle text-red-500 text-xl"></i>
-                  <div className="flex-1">
-                    <h4 className="font-bold text-red-900">Error</h4>
-                    <p className="text-sm text-red-700">{error}</p>
-                  </div>
+                <div className="beneficiary-error" role="alert">
+                  <span>{error}</span>
                   <button
+                    type="button"
                     onClick={() => setError(null)}
-                    className="text-red-400 hover:text-red-600"
+                    aria-label="Dismiss error"
                   >
-                    <i className="fas fa-times"></i>
+                    <i className="fas fa-times" aria-hidden="true"></i>
                   </button>
                 </div>
               )}
 
-              {/* Header Banner */}
-              <div className="bg-[var(--bg-main)] rounded-2xl sm:rounded-[1rem] p-6 sm:p-8 lg:p-10 mb-6 shadow-xl">
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
-                        <i className="fas fa-users text-white text-xl"></i>
-                      </div>
-                      <div>
-                        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white">
-                          Saved Beneficiaries
-                        </h1>
-                      </div>
-                    </div>
-                    <p className="text-white/75 text-xs sm:text-sm max-w-xl">
-                      Manage your trusted contacts and send money instantly to
-                      your favourite recipients.
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap gap-4">
-                    <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 min-w-[140px] border border-white/20">
-                      <div className="text-white/80 text-xs font-medium mb-1">
-                        Total Contacts
-                      </div>
-                      <div className="text-white text-2xl sm:text-3xl font-bold">
-                        {beneficiaries.length}
-                      </div>
-                    </div>
-                    <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 min-w-[140px] border border-white/20">
-                      <div className="text-white/80 text-xs font-medium mb-1">
-                        ePay Users
-                      </div>
-                      <div className="text-white text-2xl sm:text-3xl font-bold">
-                        {beneficiaries.filter((b) => b.isEpay).length}
-                      </div>
-                    </div>
-                  </div>
-                </div>
+              <div
+                className="beneficiary-tabs"
+                role="tablist"
+                aria-label="Beneficiary type"
+              >
+                {[
+                  { key: "transfer", label: "Transfer" },
+                  { key: "fcy", label: "FCY" },
+                  { key: "bill-payments", label: "Bill payments" },
+                ].map((tab) => (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    role="tab"
+                    aria-selected={activeFilter === tab.key}
+                    className={`beneficiary-tab${activeFilter === tab.key ? " beneficiary-tab--active" : ""}`}
+                    onClick={() => setActiveFilter(tab.key)}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
               </div>
 
-              {/* Search Bar */}
-              <div className="bg-white rounded-2xl sm:rounded-3xl shadow-sm border border-gray-100 p-4 sm:p-6 mb-6">
-                <div className="flex flex-col lg:flex-row gap-4 items-stretch lg:items-center">
-                  <div className="flex-1 relative">
-                    <i className="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
-                    <input
-                      type="text"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="Search contacts..."
-                      className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl sm:rounded-2xl focus:ring-2 focus:ring-[var(--bg-main)] focus:bg-white outline-none transition-all text-sm sm:text-base text-gray-900 placeholder:text-gray-400"
-                    />
-                    {searchQuery && (
-                      <button
-                        onClick={() => setSearchQuery("")}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                      >
-                        <i className="fas fa-times"></i>
-                      </button>
-                    )}
-                  </div>
-                  <div className="flex gap-2 bg-gray-100 rounded-xl p-1.5">
+              <div className="beneficiary-toolbar">
+                <label className="beneficiary-search">
+                  <i className="fas fa-search" aria-hidden="true"></i>
+                  <input
+                    type="search"
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                    placeholder="Search"
+                  />
+                  {searchQuery && (
                     <button
-                      onClick={() => setViewMode("grid")}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${viewMode === "grid" ? "bg-white text-[var(--bg-main)] shadow-sm" : "text-gray-600"}`}
+                      type="button"
+                      onClick={() => setSearchQuery("")}
+                      aria-label="Clear search"
                     >
-                      <i className="fas fa-th mr-2"></i>
-                      <span className="hidden sm:inline">Grid</span>
+                      <i className="fas fa-times" aria-hidden="true"></i>
                     </button>
-                    <button
-                      onClick={() => setViewMode("list")}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${viewMode === "list" ? "bg-white text-[var(--bg-main)] shadow-sm" : "text-gray-600"}`}
-                    >
-                      <i className="fas fa-list mr-2"></i>
-                      <span className="hidden sm:inline">List</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Filter Tabs */}
-              <div className="bg-white rounded-2xl sm:rounded-2xl shadow-sm border border-gray-100 mb-6 overflow-hidden">
-                <div className="flex overflow-x-auto no-scrollbar">
-                  {[
-                    { key: "all", label: "All", icon: "users" },
-                    { key: "banks", label: "Banks", icon: "university" },
-                    { key: "epay", label: "ePay", icon: "wallet" },
-                  ].map((tab) => (
-                    <button
-                      key={tab.key}
-                      onClick={() => setActiveFilter(tab.key)}
-                      className={`flex-1 min-w-[140px] px-4 sm:px-6 py-4 sm:py-5 flex items-center justify-center gap-2 sm:gap-3 font-bold text-xs sm:text-sm transition-all border-b-4 ${
-                        activeFilter === tab.key
-                          ? "text-[var(--bg-main)] bg-[var(--bg-main)]/5 border-[var(--bg-main)]"
-                          : "text-gray-500 border-transparent hover:bg-gray-50"
-                      }`}
-                    >
-                      <i
-                        className={`fas fa-${tab.icon} text-sm sm:text-base`}
-                      ></i>
-                      <span>{tab.label}</span>
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-xs font-bold ${
-                          activeFilter === tab.key
-                            ? "bg-[var(--bg-main)] text-white"
-                            : "bg-gray-200 text-gray-600"
-                        }`}
-                      >
-                        {getCategoryCount(tab.key)}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Frequent Recipients */}
-              {frequentBeneficiaries.length > 0 && (
-                <div className="mb-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-sm sm:text-base font-bold text-gray-700 flex items-center gap-2">
-                      <i className="fas fa-star text-yellow-500"></i>
-                      Frequent Recipients
-                    </h3>
-                  </div>
-                  <div className="flex gap-3 sm:gap-4 overflow-x-auto pb-4 no-scrollbar">
-                    {frequentBeneficiaries.map((person, idx) => (
-                      <div
-                        key={person.id}
-                        className="flex-shrink-0 flex flex-col items-center gap-2 cursor-pointer group"
-                        onClick={() => openHistoryModal(person)}
-                      >
-                        <div
-                          className={`w-16 h-16 sm:w-20 sm:h-20 rounded-2xl ${getGradientColor(idx)} flex items-center justify-center text-white text-lg sm:text-xl font-bold shadow-lg group-hover:scale-110 transition-transform`}
-                        >
-                          {person.initial}
-                        </div>
-                        <span className="text-xs font-semibold text-gray-700 text-center max-w-[80px] truncate">
-                          {person.beneficiaryName}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Loading State */}
-              {isLoadingBeneficiaries && (
-                <div className="flex items-center justify-center py-12">
-                  <div className="text-center">
-                    <div className="w-16 h-16 border-4 border-[var(--bg-main)] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                    <p className="text-gray-600">Loading beneficiaries...</p>
-                  </div>
-                </div>
-              )}
-
-              {/* Grid View */}
-              {!isLoadingBeneficiaries && viewMode === "grid" && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 mb-8 pb-15">
-                  {filteredBeneficiaries.map((b) => (
-                    <div
-                      key={b.id}
-                      className={`bg-white rounded-2xl sm:rounded-3xl border-2 transition-all hover:shadow-xl hover:-translate-y-1 group ${
-                        b.isEpay
-                          ? "border-[var(--bg-main)]/20 hover:border-[var(--bg-main)]"
-                          : "border-gray-100 hover:border-gray-300"
-                      }`}
-                    >
-                      <div className="p-5 sm:p-6">
-                        <div className="flex justify-between items-start mb-4">
-                          <div
-                            className={`w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center font-bold text-xl ${
-                              b.isEpay
-                                ? "bg-[var(--bg-main)] text-white shadow-lg shadow-[var(--bg-main)]/30"
-                                : "bg-gradient-to-br from-gray-100 to-gray-200 text-gray-700"
-                            }`}
-                          >
-                            {b.initial}
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {b.isEpay && (
-                              <span className="text-[9px] sm:text-[10px] bg-[var(--bg-main)] text-white px-2 py-1 rounded-full font-extrabold uppercase tracking-wider">
-                                ePay
-                              </span>
-                            )}
-                            <button
-                              onClick={() => handleDeleteClick(b.id)}
-                              className="w-8 h-8 rounded-lg hover:bg-[var(--bg-main)]/10 flex items-center justify-center text-gray-400 hover:text-[var(--bg-main)] transition"
-                            >
-                              <i className="fas fa-trash"></i>
-                            </button>
-                          </div>
-                        </div>
-
-                        <h4 className="font-bold text-gray-900 text-base sm:text-lg mb-1 truncate">
-                          {b.beneficiaryName}
-                        </h4>
-                        <p className="text-xs sm:text-sm text-gray-500 mb-4 truncate">
-                          {b.detail}
-                        </p>
-
-                        <div className="bg-gray-50 rounded-xl p-3 mb-4">
-                          <div className="flex justify-between items-center text-xs">
-                            <span className="text-gray-500">Added</span>
-                            <span className="font-bold text-gray-700">
-                              {b.lastTransaction}
-                            </span>
-                          </div>
-                          <div className="flex justify-between items-center text-xs mt-1">
-                            <span className="text-gray-500">Currency</span>
-                            <span className="font-bold text-[var(--bg-main)]">
-                              {b.currency}
-                            </span>
-                          </div>
-                        </div>
-
-                        <button
-                          onClick={() => openHistoryModal(b)}
-                          className="w-full py-3 text-xs sm:text-sm font-bold bg-[var(--bg-main)] text-white rounded-xl hover:opacity-90 transition flex items-center justify-center gap-2"
-                        >
-                          <i className="fas fa-eye text-xs"></i>
-                          View Details
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-
-                  {filteredBeneficiaries.length === 0 && (
-                    <div className="col-span-full bg-white rounded-3xl border-2 border-dashed border-gray-200 p-12 text-center">
-                      <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <i className="fas fa-search text-3xl text-gray-400"></i>
-                      </div>
-                      <h3 className="text-lg font-bold text-gray-700 mb-2">
-                        No beneficiaries found
-                      </h3>
-                      <p className="text-sm text-gray-500">
-                        Try adjusting your search or filter criteria
-                      </p>
-                    </div>
                   )}
-                </div>
-              )}
+                </label>
+                <button
+                  className="beneficiary-add-button"
+                  type="button"
+                  onClick={() => {
+                    setError(null);
+                    setShowAddModal(true);
+                  }}
+                >
+                  Add beneficiary
+                </button>
+              </div>
 
-              {/* List View */}
-              {!isLoadingBeneficiaries && viewMode === "list" && (
-                <div className="space-y-3 mb-8">
-                  {filteredBeneficiaries.map((b) => (
-                    <div
-                      key={b.id}
-                      className={`bg-white rounded-2xl border-2 transition-all hover:shadow-lg ${
-                        b.isEpay
-                          ? "border-[var(--bg-main)]/20 hover:border-[var(--bg-main)]"
-                          : "border-gray-100 hover:border-gray-300"
-                      }`}
-                    >
-                      <div className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-4">
-                        <div className="flex items-center gap-4 flex-1 min-w-0">
+              {isLoadingBeneficiaries ? (
+                <div className="beneficiary-state">
+                  Loading beneficiaries...
+                </div>
+              ) : groupedBeneficiaries.length === 0 ? (
+                <div className="beneficiary-state">No beneficiaries found.</div>
+              ) : (
+                <div className="beneficiary-list">
+                  {groupedBeneficiaries.map(([letter, items]) => (
+                    <div className="beneficiary-group" key={letter}>
+                      {items.map((beneficiary, index) => {
+                        const expanded =
+                          expandedBeneficiaryId === beneficiary.id;
+                        return (
                           <div
-                            className={`w-12 h-12 sm:w-14 sm:h-14 flex-shrink-0 rounded-xl flex items-center justify-center font-bold ${
-                              b.isEpay
-                                ? "bg-[var(--bg-main)] text-white"
-                                : "bg-gradient-to-br from-gray-100 to-gray-200 text-gray-700"
-                            }`}
+                            className="beneficiary-item-wrap"
+                            key={beneficiary.id}
                           >
-                            {b.initial}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <h4 className="font-bold text-gray-900 text-sm sm:text-base truncate">
-                                {b.beneficiaryName}
-                              </h4>
-                              {b.isEpay && (
-                                <span className="text-[9px] bg-[var(--bg-main)] text-white px-2 py-0.5 rounded-full font-extrabold uppercase tracking-wider flex-shrink-0">
-                                  ePay
+                            <div className="beneficiary-item-row">
+                              <button
+                                className="beneficiary-item"
+                                type="button"
+                                onClick={() =>
+                                  transferToBeneficiary(beneficiary)
+                                }
+                              >
+                                <span className="beneficiary-avatar">
+                                  {beneficiary.initial}
                                 </span>
-                              )}
+                                <span className="beneficiary-item-body">
+                                  <span className="beneficiary-name">
+                                    {beneficiary.beneficiaryName}
+                                  </span>
+                                  <span className="beneficiary-detail">
+                                    {beneficiary.detail}
+                                  </span>
+                                </span>
+                                {beneficiary.isEpay && (
+                                  <span className="beneficiary-kind">ePay</span>
+                                )}
+                                {index === 0 && (
+                                  <span className="beneficiary-letter">
+                                    {letter}
+                                  </span>
+                                )}
+                              </button>
+                              <button
+                                className="beneficiary-menu-btn"
+                                type="button"
+                                aria-label="More actions"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setExpandedBeneficiaryId(
+                                    expanded ? null : beneficiary.id,
+                                  );
+                                }}
+                              >
+                                <i
+                                  className="fas fa-ellipsis-v"
+                                  aria-hidden="true"
+                                />
+                              </button>
                             </div>
-                            <p className="text-xs sm:text-sm text-gray-500 truncate">
-                              {b.detail}
-                            </p>
+                            {expanded && (
+                              <div className="beneficiary-actions">
+                                <button
+                                  type="button"
+                                  className="beneficiary-action beneficiary-action--delete"
+                                  onClick={() =>
+                                    handleDeleteClick(beneficiary.id)
+                                  }
+                                >
+                                  <i
+                                    className="fas fa-trash"
+                                    aria-hidden="true"
+                                  />
+                                  Delete
+                                </button>
+                                <button
+                                  type="button"
+                                  className="beneficiary-action beneficiary-action--edit"
+                                  onClick={() => openEditModal(beneficiary)}
+                                >
+                                  <i
+                                    className="fas fa-pen"
+                                    aria-hidden="true"
+                                  />
+                                  Edit
+                                </button>
+                                <button
+                                  type="button"
+                                  className="beneficiary-action beneficiary-action--history"
+                                  onClick={() => openHistoryModal(beneficiary)}
+                                >
+                                  <i
+                                    className="fas fa-clock"
+                                    aria-hidden="true"
+                                  />
+                                  History
+                                </button>
+                                <button
+                                  type="button"
+                                  className="beneficiary-action beneficiary-action--transfer"
+                                  onClick={() =>
+                                    transferToBeneficiary(beneficiary)
+                                  }
+                                >
+                                  Transfer
+                                  <i
+                                    className="fas fa-arrow-right"
+                                    aria-hidden="true"
+                                  />
+                                </button>
+                              </div>
+                            )}
                           </div>
-                        </div>
-
-                        <div className="flex items-center gap-3 sm:gap-4 justify-between sm:justify-end">
-                          <div className="text-right">
-                            <div className="text-xs text-gray-500">
-                              {b.lastTransaction}
-                            </div>
-                            <div className="text-sm font-bold text-[var(--bg-main)]">
-                              {b.currency}
-                            </div>
-                          </div>
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => openHistoryModal(b)}
-                              className="px-4 py-2 bg-[var(--bg-main)] text-white rounded-xl hover:opacity-90 transition flex items-center justify-center gap-2 text-sm font-bold"
-                            >
-                              <i className="fas fa-eye"></i>
-                              <span className="hidden sm:inline">Details</span>
-                            </button>
-                            <button
-                              onClick={() => handleDeleteClick(b.id)}
-                              className="w-10 h-10 bg-[var(--bg-main)]/10 text-[var(--bg-main)] rounded-xl hover:bg-[var(--bg-main)]/20 transition flex items-center justify-center"
-                            >
-                              <i className="fas fa-trash"></i>
-                            </button>
-                          </div>
-                        </div>
-                      </div>
+                        );
+                      })}
                     </div>
                   ))}
-
-                  {filteredBeneficiaries.length === 0 && (
-                    <div className="bg-white rounded-3xl border-2 border-dashed border-gray-200 p-12 text-center">
-                      <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <i className="fas fa-search text-3xl text-gray-400"></i>
-                      </div>
-                      <h3 className="text-lg font-bold text-gray-700 mb-2">
-                        No beneficiaries found
-                      </h3>
-                      <p className="text-sm text-gray-500">
-                        Try adjusting your search or filter criteria
-                      </p>
-                    </div>
-                  )}
                 </div>
               )}
-            </div>
+            </section>
           </div>
-          <Footer theme={theme} />
         </div>
       </main>
-
       <MobileNav activeTab="none" onPlusClick={() => setIsDepositOpen(true)} />
       <DepositModal
         isOpen={isDepositOpen}
         onClose={() => setIsDepositOpen(false)}
         theme={theme}
       />
+
+      {showAddModal && (
+        <div
+          className="beneficiary-modal-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Add beneficiary"
+        >
+          <div className="beneficiary-modal">
+            <div className="beneficiary-modal-heading">
+              <h2>Add beneficiary</h2>
+              <button
+                type="button"
+                onClick={() => setShowAddModal(false)}
+                aria-label="Close add form"
+              >
+                <i className="fas fa-times" aria-hidden="true"></i>
+              </button>
+            </div>
+            {error && (
+              <div className="beneficiary-error" role="alert">
+                {error}
+              </div>
+            )}
+            <label className="beneficiary-field">
+              <span>Beneficiary type</span>
+              <select
+                value={addForm.beneficiaryType}
+                onChange={(event) =>
+                  setAddForm({
+                    ...addForm,
+                    beneficiaryType: event.target.value as "BANK" | "USER",
+                  })
+                }
+              >
+                <option value="BANK">Bank account</option>
+                <option value="USER">ePay user</option>
+              </select>
+            </label>
+            <label className="beneficiary-field">
+              <span>Beneficiary name</span>
+              <input
+                value={addForm.beneficiaryName}
+                onChange={(event) =>
+                  setAddForm({
+                    ...addForm,
+                    beneficiaryName: event.target.value,
+                  })
+                }
+                maxLength={100}
+              />
+            </label>
+            {addForm.beneficiaryType === "BANK" ? (
+              <>
+                <label className="beneficiary-field">
+                  <span>Account name</span>
+                  <input
+                    value={addForm.accountName}
+                    onChange={(event) =>
+                      setAddForm({
+                        ...addForm,
+                        accountName: event.target.value,
+                      })
+                    }
+                    maxLength={100}
+                  />
+                </label>
+                <label className="beneficiary-field">
+                  <span>Account number</span>
+                  <input
+                    inputMode="numeric"
+                    value={addForm.accountNumber}
+                    onChange={(event) =>
+                      setAddForm({
+                        ...addForm,
+                        accountNumber: event.target.value.replace(/\D/g, ""),
+                      })
+                    }
+                    maxLength={16}
+                  />
+                </label>
+                <div className="beneficiary-field-row">
+                  <label className="beneficiary-field">
+                    <span>Bank name</span>
+                    <input
+                      value={addForm.bankName}
+                      onChange={(event) =>
+                        setAddForm({ ...addForm, bankName: event.target.value })
+                      }
+                    />
+                  </label>
+                  <label className="beneficiary-field">
+                    <span>Bank code</span>
+                    <input
+                      value={addForm.bankCode}
+                      onChange={(event) =>
+                        setAddForm({ ...addForm, bankCode: event.target.value })
+                      }
+                    />
+                  </label>
+                </div>
+              </>
+            ) : (
+              <label className="beneficiary-field">
+                <span>ePay username</span>
+                <input
+                  value={addForm.recipientUsername}
+                  onChange={(event) =>
+                    setAddForm({
+                      ...addForm,
+                      recipientUsername: event.target.value,
+                    })
+                  }
+                />
+              </label>
+            )}
+            <label className="beneficiary-field">
+              <span>Currency</span>
+              <input
+                value={addForm.currency}
+                onChange={(event) =>
+                  setAddForm({
+                    ...addForm,
+                    currency: event.target.value.toUpperCase(),
+                  })
+                }
+                maxLength={10}
+              />
+            </label>
+            <button
+              className="beneficiary-save-button"
+              type="button"
+              disabled={isCreatingBeneficiary}
+              onClick={createBeneficiary}
+            >
+              {isCreatingBeneficiary ? "Saving..." : "Save beneficiary"}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
@@ -664,6 +836,137 @@ const BeneficiaryManager = () => {
                 Delete
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {editingBeneficiary && (
+        <div
+          className="beneficiary-modal-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Edit beneficiary"
+        >
+          <div className="beneficiary-modal">
+            <div className="beneficiary-modal-heading">
+              <h2>Edit beneficiary</h2>
+              <button
+                type="button"
+                onClick={() => setEditingBeneficiary(null)}
+                aria-label="Close edit form"
+              >
+                <i className="fas fa-times" aria-hidden="true"></i>
+              </button>
+            </div>
+            {error && (
+              <div className="beneficiary-error" role="alert">
+                {error}
+              </div>
+            )}
+            <label className="beneficiary-field">
+              <span>Beneficiary name</span>
+              <input
+                value={editForm.beneficiaryName}
+                onChange={(event) =>
+                  setEditForm({
+                    ...editForm,
+                    beneficiaryName: event.target.value,
+                  })
+                }
+                maxLength={100}
+              />
+            </label>
+            {editingBeneficiary.beneficiaryType === "BANK" ? (
+              <>
+                <label className="beneficiary-field">
+                  <span>Account name</span>
+                  <input
+                    value={editForm.accountName}
+                    onChange={(event) =>
+                      setEditForm({
+                        ...editForm,
+                        accountName: event.target.value,
+                      })
+                    }
+                    maxLength={100}
+                  />
+                </label>
+                <label className="beneficiary-field">
+                  <span>Account number</span>
+                  <input
+                    inputMode="numeric"
+                    value={editForm.accountNumber}
+                    onChange={(event) =>
+                      setEditForm({
+                        ...editForm,
+                        accountNumber: event.target.value.replace(/\D/g, ""),
+                      })
+                    }
+                    maxLength={16}
+                  />
+                </label>
+                <div className="beneficiary-field-row">
+                  <label className="beneficiary-field">
+                    <span>Bank name</span>
+                    <input
+                      value={editForm.bankName}
+                      onChange={(event) =>
+                        setEditForm({
+                          ...editForm,
+                          bankName: event.target.value,
+                        })
+                      }
+                    />
+                  </label>
+                  <label className="beneficiary-field">
+                    <span>Bank code</span>
+                    <input
+                      value={editForm.bankCode}
+                      onChange={(event) =>
+                        setEditForm({
+                          ...editForm,
+                          bankCode: event.target.value,
+                        })
+                      }
+                    />
+                  </label>
+                </div>
+              </>
+            ) : (
+              <label className="beneficiary-field">
+                <span>ePay username</span>
+                <input
+                  value={editForm.recipientUsername}
+                  onChange={(event) =>
+                    setEditForm({
+                      ...editForm,
+                      recipientUsername: event.target.value,
+                    })
+                  }
+                />
+              </label>
+            )}
+            <label className="beneficiary-field">
+              <span>Currency</span>
+              <input
+                value={editForm.currency}
+                onChange={(event) =>
+                  setEditForm({
+                    ...editForm,
+                    currency: event.target.value.toUpperCase(),
+                  })
+                }
+                maxLength={10}
+              />
+            </label>
+            <button
+              className="beneficiary-save-button"
+              type="button"
+              disabled={isSavingBeneficiary}
+              onClick={saveBeneficiary}
+            >
+              {isSavingBeneficiary ? "Saving..." : "Save changes"}
+            </button>
           </div>
         </div>
       )}

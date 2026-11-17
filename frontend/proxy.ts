@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-// Route configuration classes
 class RouteConfig {
   private routes: string[];
 
@@ -11,13 +10,11 @@ class RouteConfig {
 
   matches(pathname: string): boolean {
     return this.routes.some((route) => {
-      // Exact match
       if (route === pathname) return true;
       if (route.endsWith("/*")) {
         const baseRoute = route.slice(0, -2);
         return pathname.startsWith(baseRoute);
       }
-
       return false;
     });
   }
@@ -51,7 +48,6 @@ export class PublicRoutes extends RouteConfig {
   }
 }
 
-// Private routes - require authentication
 export class PrivateRoutes extends RouteConfig {
   constructor(routes: string[] = []) {
     const defaultPrivateRoutes = [
@@ -81,6 +77,8 @@ export class PrivateRoutes extends RouteConfig {
       "/statements/*",
       "/beneficiary",
       "/beneficiary/*",
+      "/beneficiary-transfer",
+      "/beneficiary-transfer/*",
       "/support",
       "/support/*",
       "/investments",
@@ -90,13 +88,11 @@ export class PrivateRoutes extends RouteConfig {
   }
 }
 
-// Auth utility functions
 class AuthUtils {
   static isAuthenticated(request: NextRequest): boolean {
     const jwtCookie = request.cookies.get("jwt");
     const dataCookie = request.cookies.get("data");
 
-    // Accept if either the jwt cookie alone exists (simpler check)
     if (jwtCookie?.value) {
       return true;
     }
@@ -109,8 +105,7 @@ class AuthUtils {
       const dataValue = decodeURIComponent(dataCookie.value);
       const parsedData = JSON.parse(dataValue);
       return !!(parsedData?.user?._jwt_?.jwt && parsedData.user.userId);
-    } catch (error) {
-      console.error("Error parsing auth data:", error);
+    } catch {
       return false;
     }
   }
@@ -119,12 +114,10 @@ class AuthUtils {
     try {
       const dataCookie = request.cookies.get("data");
       if (!dataCookie) return null;
-
       const dataValue = decodeURIComponent(dataCookie.value);
       const parsedData = JSON.parse(dataValue);
       return parsedData?.user || null;
-    } catch (error) {
-      console.error("Error getting user data:", error);
+    } catch {
       return null;
     }
   }
@@ -136,11 +129,10 @@ class AuthUtils {
   }
 }
 
-// Initialize route configurations
 const publicRoutes = new PublicRoutes();
 const privateRoutes = new PrivateRoutes();
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (
@@ -164,34 +156,24 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Redirect unauthenticated users from private routes to login
   if (!isAuthenticated && isPrivateRoute) {
     const url = request.nextUrl.clone();
     url.pathname = "/auth/login";
     url.searchParams.set("redirect", pathname);
     return NextResponse.redirect(url);
   }
+
   if (isPublicRoute) {
     return NextResponse.next();
   }
 
-  // Default: allow the request
   return NextResponse.next();
 }
 
-// Configure which paths the middleware should run on
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public folder
-     */
     "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
 
-// Export classes and utilities for use in other parts of the application
 export { AuthUtils, RouteConfig };

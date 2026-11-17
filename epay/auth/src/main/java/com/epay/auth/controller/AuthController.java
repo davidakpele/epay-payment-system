@@ -15,6 +15,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.RequestBody;
 
 @Tag(name = "Authentication", description = "User registration, login, verification, and password recovery")
 @RestController
@@ -111,5 +112,21 @@ public class AuthController {
     @GetMapping("/logout")
     public ResponseEntity<?> logout(@RequestParam(name = "userId", required = false) Long userId) {
         return authService.logoutUser(userId);
+    }
+
+    @Operation(
+        summary     = "Refresh an access token",
+        description = "Exchanges a valid REFRESH token for a new ACCESS token and REFRESH token pair. No re-login required while the user is active."
+    )
+    @PostMapping("/refresh")
+    public ResponseEntity<?> refresh(@RequestHeader(value = "Authorization", required = false) String authHeader,
+                                     @RequestBody(required = false) java.util.Map<String, String> body) {
+        String token = null;
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            token = authHeader.substring(7).trim();
+        } else if (body != null) {
+            token = body.get("refreshToken");
+        }
+        return authService.refreshToken(token);
     }
 }

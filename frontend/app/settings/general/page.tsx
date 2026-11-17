@@ -2,7 +2,6 @@
 
 import { Toast } from "@/app/types/auth";
 import DepositModal from "@/components/DepositModal";
-import Footer from "@/components/Footer";
 import Header from "@/components/Header";
 import LoadingScreen from "@/components/loader/Loadingscreen";
 import MobileNav from "@/components/MobileNav";
@@ -881,7 +880,9 @@ const Settings = () => {
 
   return (
     <>
-      <div className={`dashboard-container ${theme === "dark" ? "dark" : ""}`}>
+      <div
+        className={`dashboard-container no-right-panel ${theme === "dark" ? "dark" : ""}`}
+      >
         <Sidebar />
         <main
           className={`main-content ${isDepositOpen ? "dashboard-blur" : ""}`}
@@ -2184,7 +2185,6 @@ const Settings = () => {
                 </>
               )}
             </div>
-            <Footer theme={theme} />
           </div>
         </main>
         <MobileNav

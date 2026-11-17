@@ -1,62 +1,87 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useRef } from 'react';
-import DepositModal from '@/components/DepositModal';
-import Footer from '@/components/Footer';
-import Header from '@/components/Header';
-import MobileNav from '@/components/MobileNav';
-import Sidebar from '@/components/Sidebar';
-import LoadingScreen from '@/components/loader/Loadingscreen';
-import Link from 'next/link';
-import Image from 'next/image';
-import { Building2, ChevronRight, CreditCard,  Grip, ShoppingBag, ShoppingCart, Wallet } from 'lucide-react';
-import './Shopping.css';
-import { Toast } from '@/app/types/auth';
-import { shoppingProviders } from '@/app/lib/ImageProvider';
-import SupportChatBot from '@/components/SupportChatBot';
+import { useState, useEffect, useRef } from "react";
+import DepositModal from "@/components/DepositModal";
+import Header from "@/components/Header";
+import MobileNav from "@/components/MobileNav";
+import Sidebar from "@/components/Sidebar";
+import LoadingScreen from "@/components/loader/Loadingscreen";
+import Link from "next/link";
+import Image from "next/image";
+import {
+  Building2,
+  ChevronRight,
+  CreditCard,
+  Grip,
+  ShoppingBag,
+  ShoppingCart,
+  Wallet,
+} from "lucide-react";
+import "./Shopping.css";
+import { Toast } from "@/app/types/auth";
+import { shoppingProviders } from "@/app/lib/ImageProvider";
+import RightPanel from "@/components/RightPanel";
+import SupportChatBot from "@/components/SupportChatBot";
 
 const paymentOptions = [
-  { id: 'wallet',   label: 'Wallet Balance', icon: <Wallet style={{color:"var(--bg-main)"}}/> },
-  { id: 'bank',     label: 'Bank Transfer',  icon: <Building2 style={{color:"var(--warning-color)"}}/> },
-  { id: 'card',     label: 'Card Payment',   icon: <CreditCard style={{color:"var(--bg-input-border)"}}/>},
+  {
+    id: "wallet",
+    label: "Wallet Balance",
+    icon: <Wallet style={{ color: "var(--bg-main)" }} />,
+  },
+  {
+    id: "bank",
+    label: "Bank Transfer",
+    icon: <Building2 style={{ color: "var(--warning-color)" }} />,
+  },
+  {
+    id: "card",
+    label: "Card Payment",
+    icon: <CreditCard style={{ color: "var(--bg-input-border)" }} />,
+  },
 ];
 
 const quickAmounts = [5000, 10000, 20000];
 
 const ShoppingBill = () => {
-  const [isDepositOpen, setIsDepositOpen]         = useState(false);
-  const [theme, setTheme]                         = useState<'light' | 'dark'>('light');
-  const [isPageLoading, setIsPageLoading]         = useState(true);
-  const [isSubmitting, setIsSubmitting]           = useState(false);
-  const [toasts, setToasts]                       = useState<Toast[]>([]);
-  const [isChatOpen, setIsChatOpen]               = useState(false);
+  const [isDepositOpen, setIsDepositOpen] = useState(false);
+  const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [isPageLoading, setIsPageLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [toasts, setToasts] = useState<Toast[]>([]);
+  const [isChatOpen, setIsChatOpen] = useState(false);
   // Form
-  const [orderId, setOrderId]                     = useState('');
-  const [selectedPayment, setSelectedPayment]     = useState<string | null>(null);
-  const [amount, setAmount]                       = useState('');
-  const [selectedAmount, setSelectedAmount]       = useState<number | null>(null);
-  const [selectedProvider, setSelectedProvider]   = useState<string | null>(null);
+  const [orderId, setOrderId] = useState("");
+  const [selectedPayment, setSelectedPayment] = useState<string | null>(null);
+  const [amount, setAmount] = useState("");
+  const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
+  const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
 
   // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-  const showToast = (msg: string, type: 'warning' | 'success' = 'warning') => {
+  const showToast = (msg: string, type: "warning" | "success" = "warning") => {
     setToasts((prev) => {
       if (prev.length >= 5) return prev;
       const id = Date.now();
       const newToast: Toast = { id, message: msg, type, exiting: false };
       setTimeout(() => {
-        setToasts((cur) => cur.map((t) => (t.id === id ? { ...t, exiting: true } : t)));
-        setTimeout(() => setToasts((cur) => cur.filter((t) => t.id !== id)), 300);
+        setToasts((cur) =>
+          cur.map((t) => (t.id === id ? { ...t, exiting: true } : t)),
+        );
+        setTimeout(
+          () => setToasts((cur) => cur.filter((t) => t.id !== id)),
+          300,
+        );
       }, 3000);
       return [...prev, newToast];
     });
   };
 
   const toggleTheme = () => {
-    const newTheme = theme === 'light' ? 'dark' : 'light';
+    const newTheme = theme === "light" ? "dark" : "light";
     setTheme(newTheme);
-    localStorage.setItem('theme', newTheme);
-    document.documentElement.classList.toggle('dark', newTheme === 'dark');
+    localStorage.setItem("theme", newTheme);
+    document.documentElement.classList.toggle("dark", newTheme === "dark");
   };
 
   const handleAmountSelect = (val: number) => {
@@ -65,15 +90,15 @@ const ShoppingBill = () => {
   };
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value.replace(/,/g, '').replace(/\D/g, '');
+    const raw = e.target.value.replace(/,/g, "").replace(/\D/g, "");
     setAmount(raw);
     setSelectedAmount(null);
   };
 
   const getFormattedAmount = () => {
-    if (!amount) return '';
+    if (!amount) return "";
     try {
-      return BigInt(amount).toLocaleString('en-US');
+      return BigInt(amount).toLocaleString("en-US");
     } catch {
       return amount;
     }
@@ -83,32 +108,35 @@ const ShoppingBill = () => {
 
   const handleSubmit = async () => {
     if (!orderId || orderId.trim().length < 3) {
-      showToast('Please enter a valid Order ID', 'warning');
+      showToast("Please enter a valid Order ID", "warning");
       return;
     }
     if (!selectedPayment) {
-      showToast('Please select a payment option', 'warning');
+      showToast("Please select a payment option", "warning");
       return;
     }
     if (!amount || Number(amount) <= 0) {
-      showToast('Please enter a valid amount', 'warning');
+      showToast("Please enter a valid amount", "warning");
       return;
     }
     if (Number(amount) < 100) {
-      showToast('Minimum amount is ₦100', 'warning');
+      showToast("Minimum amount is ₦100", "warning");
       return;
     }
 
     try {
       setIsSubmitting(true);
       await new Promise((res) => setTimeout(res, 2000)); // replace with real API call
-      showToast(`Order ${orderId} paid successfully via ${paymentOptions.find(p => p.id === selectedPayment)?.label}!`, 'success');
-      setOrderId('');
-      setAmount('');
+      showToast(
+        `Order ${orderId} paid successfully via ${paymentOptions.find((p) => p.id === selectedPayment)?.label}!`,
+        "success",
+      );
+      setOrderId("");
+      setAmount("");
       setSelectedAmount(null);
       setSelectedPayment(null);
     } catch {
-      showToast('Payment failed. Please try again.', 'warning');
+      showToast("Payment failed. Please try again.", "warning");
     } finally {
       setIsSubmitting(false);
     }
@@ -126,24 +154,23 @@ const ShoppingBill = () => {
   // ─── Render ──────────────────────────────────────────────────────────────────
 
   return (
-    <div className={`dashboard-container ${theme === 'dark' ? 'dark' : ''}`}>
+    <div className={`dashboard-container ${theme === "dark" ? "dark" : ""}`}>
       <Sidebar />
 
-      <main className={`main-content ${isDepositOpen ? 'dashboard-blur' : ''}`}>
+      <main className={`main-content ${isDepositOpen ? "dashboard-blur" : ""}`}>
         <Header theme={theme} toggleTheme={toggleTheme} />
 
         <div className="scrollable-content">
-
           {/* ── Toasts ── */}
           <div className="toastrs">
             {toasts.map((toast) => (
               <div
                 key={toast.id}
-                className={`toastr toastr--${toast.type} ${toast.exiting ? 'toast-exit' : ''}`}
+                className={`toastr toastr--${toast.type} ${toast.exiting ? "toast-exit" : ""}`}
               >
                 <div className="toast-icon">
                   <i
-                    className={`fa ${toast.type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}`}
+                    className={`fa ${toast.type === "success" ? "fa-check-circle" : "fa-exclamation-circle"}`}
                     aria-hidden="true"
                   />
                 </div>
@@ -153,10 +180,11 @@ const ShoppingBill = () => {
           </div>
 
           <div className="main-container">
-
             {/* ── Breadcrumb ── */}
             <div className="shopping-breadcrumb">
-              <Link href="/dashboard" className="breadcrumb-link">Dashboard</Link>
+              <Link href="/dashboard" className="breadcrumb-link">
+                Dashboard
+              </Link>
               <ChevronRight size={14} className="breadcrumb-sep" />
               <span className="breadcrumb-current">Shopping</span>
             </div>
@@ -166,7 +194,6 @@ const ShoppingBill = () => {
 
             {/* ── Main Card ── */}
             <div className="shopping-card">
-
               {/* Left — Illustration */}
               <div className="shopping-illustration-col">
                 <div className="shopping-illustration-img">
@@ -181,9 +208,12 @@ const ShoppingBill = () => {
                     <span>🛍️</span>
                     <div>
                       <p className="promo-text">
-                        Shop from top stores and <strong>pay instantly</strong> from your wallet!
+                        Shop from top stores and <strong>pay instantly</strong>{" "}
+                        from your wallet!
                       </p>
-                      <a href="#" className="promo-link">Learn more</a>
+                      <a href="#" className="promo-link">
+                        Learn more
+                      </a>
                     </div>
                   </div>
                 </div>
@@ -191,7 +221,6 @@ const ShoppingBill = () => {
 
               {/* Right — Form */}
               <div className="shopping-form-col">
-
                 {/* Section header */}
                 <div className="shop-form-header">
                   <ShoppingCart size={18} />
@@ -200,9 +229,7 @@ const ShoppingBill = () => {
 
                 {/* Order ID */}
                 <div className="shopping-field">
-                  <label className="shopping-label">
-                    Order ID
-                  </label>
+                  <label className="shopping-label">Order ID</label>
                   <input
                     type="text"
                     className="shopping-input"
@@ -211,20 +238,20 @@ const ShoppingBill = () => {
                     onChange={(e) => setOrderId(e.target.value)}
                   />
                   {orderId && orderId.trim().length < 3 && (
-                    <span className="validation-error">Please enter a valid Order ID</span>
+                    <span className="validation-error">
+                      Please enter a valid Order ID
+                    </span>
                   )}
                 </div>
 
                 {/* Payment Option */}
                 <div className="shopping-field">
-                  <label className="shopping-label">
-                    Payment Option
-                  </label>
+                  <label className="shopping-label">Payment Option</label>
                   <div className="payment-options-row">
                     {paymentOptions.map((opt) => (
                       <button
                         key={opt.id}
-                        className={`payment-option-btn ${selectedPayment === opt.id ? 'selected' : ''}`}
+                        className={`payment-option-btn ${selectedPayment === opt.id ? "selected" : ""}`}
                         onClick={() => setSelectedPayment(opt.id)}
                       >
                         <span>{opt.icon}</span>
@@ -251,15 +278,18 @@ const ShoppingBill = () => {
                     {quickAmounts.map((q) => (
                       <button
                         key={q}
-                        className={`quick-amount-btn ${selectedAmount === q ? 'selected' : ''}`}
+                        className={`quick-amount-btn ${selectedAmount === q ? "selected" : ""}`}
                         onClick={() => handleAmountSelect(q)}
                       >
                         ₦{q.toLocaleString()}
                       </button>
                     ))}
                     <button
-                      className={`quick-amount-btn ${!selectedAmount && amount && !quickAmounts.includes(Number(amount)) ? 'selected' : ''}`}
-                      onClick={() => { setSelectedAmount(null); setAmount(''); }}
+                      className={`quick-amount-btn ${!selectedAmount && amount && !quickAmounts.includes(Number(amount)) ? "selected" : ""}`}
+                      onClick={() => {
+                        setSelectedAmount(null);
+                        setAmount("");
+                      }}
                     >
                       Other
                     </button>
@@ -296,7 +326,7 @@ const ShoppingBill = () => {
                 {shoppingProviders.map((provider) => (
                   <div
                     key={provider.id}
-                    className={`shop-provider-card ${selectedProvider === provider.id ? 'shop-provider-active' : ''}`}
+                    className={`shop-provider-card ${selectedProvider === provider.id ? "shop-provider-active" : ""}`}
                     onClick={() => setSelectedProvider(provider.id)}
                   >
                     <Image
@@ -304,22 +334,26 @@ const ShoppingBill = () => {
                       alt={provider.name}
                       width={120}
                       height={40}
-                      style={{ objectFit: 'contain', maxWidth: '100%', height: 'auto' }}
+                      style={{
+                        objectFit: "contain",
+                        maxWidth: "100%",
+                        height: "auto",
+                      }}
                     />
                   </div>
                 ))}
                 <div className="shop-provider-card shop-more-stores">
-                  <div className="more-stores-icon"><Grip/></div>
+                  <div className="more-stores-icon">
+                    <Grip />
+                  </div>
                   <span>More Stores</span>
                 </div>
               </div>
             </div>
-
           </div>
-
-          <Footer theme={theme} />
         </div>
       </main>
+      <RightPanel theme={theme} />
 
       <MobileNav activeTab="none" onPlusClick={() => setIsDepositOpen(true)} />
       <DepositModal
@@ -336,8 +370,11 @@ const ShoppingBill = () => {
           <i className="fa-solid fa-comment-dots"></i>
         </button>
       )}
-      
-      <SupportChatBot isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
+
+      <SupportChatBot
+        isOpen={isChatOpen}
+        onClose={() => setIsChatOpen(false)}
+      />
     </div>
   );
 };

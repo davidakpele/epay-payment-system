@@ -319,6 +319,7 @@ public class AuthenticationService implements IAuthenticationService{
                     tokenId,
                     List.of("PASSWORD")
             );
+            String refreshTokenStr = jwtService.generateRefreshToken(user, session.getSessionId(), tokenId);
             userAttemptService.UpdateUserAccount(user.getId());
 
             UserRecord rec = userRecordRepository.findByUserId(user.getId())
@@ -346,6 +347,7 @@ public class AuthenticationService implements IAuthenticationService{
             });
 
             authResponse.put("jwt", jwtToken);
+            authResponse.put("refreshToken", refreshTokenStr);
             authResponse.put("email", user.getEmail());
             authResponse.put("userId", user.getId());
             authResponse.put("status", HttpStatus.OK.value());
@@ -817,5 +819,74 @@ public class AuthenticationService implements IAuthenticationService{
         authResponse.put("message", "User successfully logout from the system");
         authResponse.put("status", "success");
         return ResponseEntity.ok().body(authResponse);
+    }
+
+    @Override
+    public ResponseEntity<?> refreshToken(String refreshToken) {
+        Map<String, Object> resp = new LinkedHashMap<>();
+
+        if (refreshToken == null || refreshToken.isBlank()) {
+            return buildAuthError(resp, "Refresh token is required.", HttpStatus.BAD_REQUEST);
+        }
+
+        String token = refreshToken.startsWith("Bearer ") ? refreshToken.substring(7).trim() : refreshToken.trim();
+
+        try {
+            String tokenType = jwtService.extractTokenType(token);
+            if (!"REFRESH".equalsIgnoreCase(tokenType)) {
+                return buildAuthError(resp, "Invalid token type. Expected REFRESH token.", HttpStatus.UNAUTHORIZED);
+            }
+
+            if (jwtService.isTokenExpired(token)) {
+                return buildAuthError(resp, "Refresh token has expired. Please log in again.", HttpStatus.UNAUTHORIZED);
+            }
+
+            String sessionId = jwtService.extractSessionId(token);
+            if (sessionId != null && !userTracerService.isSessionValid(sessionId)) {
+                return buildAuthError(resp, "Session has been invalidated. Please log in again.", HttpStatus.UNAUTHORIZED);
+            }
+
+            String subject = jwtService.extractUsername(token);
+            User user = null;
+            try {
+                UUID userUuid = UUID.fromString(subject);
+                user = userRepository.findByUserUuid(userUuid).orElse(null);
+            } catch (IllegalArgumentException ignored) {
+                user = userRepository.findByUsername(subject)
+                        .or(() -> userRepository.findByEmail(subject))
+                        .orElse(null);
+            }
+
+            if (user == null) {
+                return buildAuthError(resp, "User not found.", HttpStatus.UNAUTHORIZED);
+            }
+
+            if (!user.isEnabled()) {
+                return buildAuthError(resp, "Account is not verified.", HttpStatus.UNAUTHORIZED);
+            }
+
+            String newTokenId = UUID.randomUUID().toString();
+            String newAccessToken = jwtService.generateToken(
+                    user,
+                    sessionId,
+                    newTokenId,
+                    List.of("PASSWORD")
+            );
+            String newRefreshToken = jwtService.generateRefreshToken(user, sessionId, newTokenId);
+
+            if (sessionId != null) {
+                userTracerService.renewSession(sessionId, user.getId());
+            }
+
+            resp.put("jwt", newAccessToken);
+            resp.put("refreshToken", newRefreshToken);
+            resp.put("success", true);
+            resp.put("status", HttpStatus.OK.value());
+            return ResponseEntity.ok(resp);
+
+        } catch (Exception e) {
+            log.warn("[Refresh] Token refresh failed: {}", e.getMessage());
+            return buildAuthError(resp, "Token refresh failed. Please log in again.", HttpStatus.UNAUTHORIZED);
+        }
     }
 }

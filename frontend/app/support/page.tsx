@@ -14,7 +14,6 @@ import "./Support.css";
 
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
-import Footer from "@/components/Footer";
 import MobileNav from "@/components/MobileNav";
 import { FormData } from "../types/utils";
 import { contactMethods, faqs, quickLinks } from "../lib/SupportData";
@@ -102,7 +101,7 @@ const Support = () => {
     return <LoadingScreen />;
   }
   return (
-    <div className={`dashboard-container`}>
+    <div className="dashboard-container no-right-panel">
       <Sidebar />
       <main className={`main-content ${isDepositOpen ? "dashboard-blur" : ""}`}>
         <Header theme={theme} toggleTheme={toggleTheme} />
@@ -382,7 +381,6 @@ const Support = () => {
               </section>
             </div>
           </div>
-          <Footer theme={theme} />
         </div>
       </main>
       <SupportChatBot

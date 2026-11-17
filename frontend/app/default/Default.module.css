@@ -175,7 +175,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 40px;
-  margin-bottom: 160px; /* leave room for bottom banner + footer */
+  margin-bottom: 110px;
 }
 
 /* ── HERO COPY ── */
@@ -518,7 +518,7 @@
   flex-shrink: 0;
   width: 100%;
   position: absolute;
-  bottom: 42px;
+  bottom: 0;
   left: 0;
   z-index: 3;
 }
@@ -636,85 +636,6 @@
 .btnOpen:hover {
   background: var(--white);
   color: var(--green-main);
-}
-
-/* ── FOOTER ── */
-.footer {
-  background: rgba(15, 15, 15, 0.6);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-  padding: 10px 48px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 10px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  flex-shrink: 0;
-  width: 100%;
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  z-index: 4;
-}
-
-.footerSocial {
-  display: flex;
-  gap: 10px;
-}
-
-.socialBtn {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: rgba(255, 255, 255, 0.55);
-  text-decoration: none;
-  transition:
-    0.2s,
-    color 0.2s;
-  font-size: 0.78rem;
-}
-
-.socialBtn:hover {
-  background: var(--gold);
-  color: var(--green-main);
-  border-color: var(--gold);
-}
-
-.footerLinks {
-  display: flex;
-  gap: 18px;
-  flex-wrap: wrap;
-}
-
-.footerLinks a {
-  font-size: 0.72rem;
-  color: rgba(255, 255, 255, 0.45);
-  text-decoration: none;
-  transition: color 0.2s;
-}
-
-.footerLinks a:hover {
-  color: var(--gold-light);
-}
-
-.footerCopy {
-  font-size: 0.72rem;
-  color: rgba(255, 255, 255, 0.35);
-}
-
-.footerBrand {
-  font-family:
-    "system-ui", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto",
-    "Oxygen", "Ubuntu", "Cantarell", "Open Sans", "Helvetica Neue", sans-serif;
-  font-size: 0.85rem;
-  color: var(--gold);
-  font-weight: 700;
 }
 
 /* ── RIPPLE ── */
@@ -1320,9 +1241,7 @@
     grid-template-columns: 1fr 1fr;
   }
 
-  /* Bottom banner / footer hidden on mobile */
-  .bottomBanner,
-  .footer {
+  .bottomBanner {
     display: none;
   }
 

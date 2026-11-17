@@ -38,4 +38,6 @@ public interface IAuthenticationService {
     ResponseEntity<?> sendVerificationCode(String identifier, ContactMethod method);
 
     ResponseEntity<?> logoutUser(Long userId);
+
+    ResponseEntity<?> refreshToken(String refreshToken);
 }
