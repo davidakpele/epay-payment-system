@@ -173,11 +173,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                (path.equals("/support/faqs")          && method.equals("GET"));
     }
 
-    private boolean isRefreshEndpoint(HttpServletRequest request) {
-        String path = request.getRequestURI();
-        return path.equals("/auth/refresh") || path.equals("/auth/token/refresh");
-    }
-
     private void writeError(HttpServletResponse response, int status,
                             String message, String errorCode) throws IOException {
         com.epay.common.exception.ErrorResponse body =
