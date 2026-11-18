@@ -147,6 +147,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
     }
 
+    private boolean isRefreshEndpoint(HttpServletRequest request) {
+        String path = request.getRequestURI();
+        return "POST".equalsIgnoreCase(request.getMethod())
+                && (path.equals("/auth/refresh") || path.endsWith("/auth/refresh"));
+    }
+
     private boolean isPublicEndpoint(HttpServletRequest request) {
         String path   = request.getRequestURI();
         String method = request.getMethod();

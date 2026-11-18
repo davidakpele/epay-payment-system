@@ -55,11 +55,9 @@ public interface UserDebtRepository extends JpaRepository<UserDebt, Long> {
             @Param("cutoff") LocalDateTime cutoff,
             Pageable pageable);
 
-    /** Count of users with active debt — dashboard stat */
     @Query("SELECT COUNT(DISTINCT d.userId) FROM UserDebt d WHERE d.status IN ('ACTIVE', 'PARTIAL')")
     long countUsersWithActiveDebt();
 
-    /** Count of debts by status — dashboard stat */
     @Query("SELECT d.status, COUNT(d) FROM UserDebt d GROUP BY d.status")
     List<Object[]> countByStatus();
 
