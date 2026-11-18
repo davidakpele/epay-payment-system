@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import DepositModal from "@/components/DepositModal";
-import Footer from "@/components/Footer";
 import Header from "@/components/Header";
 import MobileNav from "@/components/MobileNav";
 import Sidebar from "@/components/Sidebar";
+import RightPanel from "@/components/RightPanel";
 import LoadingScreen from "@/components/loader/Loadingscreen";
 import Link from "next/link";
 import Image from "next/image";
@@ -1068,9 +1068,9 @@ const SwapPage = () => {
             )}
           </div>
 
-          <Footer theme={theme} />
         </div>
       </main>
+      <RightPanel theme={theme} />
 
       <MobileNav
         activeTab="exchange"

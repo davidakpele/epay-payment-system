@@ -26,7 +26,7 @@ export const API_URLS = {
     REGISTER: `${SERVICE_URLS.AUTH}/auth/register`,
     PROFILE: `${SERVICE_URLS.AUTH}/auth/profile`,
     LOGOUT: (id: string) => `${SERVICE_URLS.AUTH}/auth/logout?userId=${id}`,
-    REFRESH_TOKEN: `${SERVICE_URLS.AUTH}/auth/refresh-token`,
+    REFRESH_TOKEN: `${SERVICE_URLS.AUTH}/auth/refresh`,
     VERIFYTOKEN: (token: string) =>
       `${SERVICE_URLS.AUTH}/auth/verify-otp-token?token=${token}`,
     VERIFYOTP: `${SERVICE_URLS.AUTH}/auth/verify-otp`,
@@ -140,8 +140,8 @@ export const API_URLS = {
       `${SERVICE_URLS.BENEFICIARY}/beneficiaries/${id}`,
     UPDATE: (id: string | number) =>
       `${SERVICE_URLS.BENEFICIARY}/beneficiaries/${id}`,
-    DELETE: (id: string | number) =>
-      `${SERVICE_URLS.BENEFICIARY}/beneficiaries/${id}`,
+    DELETE: (id: string | number, userId: string | number) =>
+      `${SERVICE_URLS.BENEFICIARY}/beneficiaries/${id}?userId=${encodeURIComponent(userId)}`,
     VERIFY: (id: string | number) =>
       `${SERVICE_URLS.BENEFICIARY}/beneficiaries/${id}/verify`,
     CHECK_IF_GOT_USER: (id: string | number, recipientUsername: string) =>

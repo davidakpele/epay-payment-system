@@ -37,11 +37,7 @@ body {
   --primary-green: #2b0f56af;
   --success-bg: #dcedc8;
   --success-border: #8bc34a;
-  --tm-rog: linear-gradient(
-    160deg,
-    rgb(240, 250, 242) 0%,
-    rgb(230, 244, 234) 100%
-  );
+  --tm-rog: linear-gradient(160deg, #0f172a0d 0%, #94a3b861 100%);
   --warning-red: #ef9a9a;
   --select-card: #10b981;
   --debit-amount: #dfb70a;
@@ -333,10 +329,13 @@ body {
   }
 }
 
-/* ── Hide Next.js dev error overlay badge ───────────────────────────────── */
 [data-next-badge-root],
 [data-nextjs-dialog-overlay],
 [data-nextjs-toast],
 nextjs-portal {
   display: none !important;
+}
+
+.no-right-panel .header.sticky-header {
+  right: 0;
 }

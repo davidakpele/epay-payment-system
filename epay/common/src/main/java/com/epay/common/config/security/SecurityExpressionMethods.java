@@ -99,12 +99,26 @@ public class SecurityExpressionMethods {
         }
 
         try {
-            String key = SESSION_KEY_PREFIX + sessionId;
-            boolean valid = Boolean.TRUE.equals(redisTemplate.hasKey(key));
+            String sessionKey = SESSION_KEY_PREFIX + sessionId;
+            boolean valid = Boolean.TRUE.equals(redisTemplate.hasKey(sessionKey));
+
             if (!valid) {
-                log.debug("[Security] hasValidSession: session {} not found in Redis", sessionId);
+                Long userId = claims.getUserId();
+                if (userId != null) {
+                    java.time.Duration ttl = java.time.Duration.ofMinutes(5);
+                    String activeKey = "session:active:" + userId;
+                    redisTemplate.opsForValue().set(activeKey,  sessionId, ttl);
+                    redisTemplate.opsForValue().set(sessionKey, String.valueOf(userId), ttl);
+                    log.debug("[Security] hasValidSession: re-seeded expired session={} for userId={}", sessionId, userId);
+                    return true;
+                }
+                log.debug("[Security] hasValidSession: session {} not found in Redis and userId missing", sessionId);
+                return false;
             }
-            return valid;
+
+            redisTemplate.expire(SESSION_KEY_PREFIX + sessionId, java.time.Duration.ofMinutes(5));
+            redisTemplate.expire("session:active:" + claims.getUserId(), java.time.Duration.ofMinutes(5));
+            return true;
         } catch (Exception e) {
             log.warn("[Security] Redis session check failed for sid={}: {} — failing open",
                     sessionId, e.getMessage());

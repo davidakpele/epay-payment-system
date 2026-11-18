@@ -1014,7 +1014,9 @@ public class WalletService implements IWalletService {
         WalletBalanceDTO dto = new WalletBalanceDTO();
         dto.setCurrency_code(b.getCurrencyCode());
         dto.setSymbol(b.getCurrencySymbol());
-        dto.setBalance(b.getBalance().toPlainString());
+        dto.setBalance(b.getBalance()
+                .setScale(2, java.math.RoundingMode.HALF_UP)
+                .toPlainString());
         return dto;
     }
 }

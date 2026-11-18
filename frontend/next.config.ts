@@ -10,7 +10,10 @@ const nextConfig: NextConfig = {
     appNavFailHandling: false,
     turbopackFileSystemCacheForDev: true,
     turbopackClientSideNestedAsyncChunking: true,
+    optimizePackageImports: ["lucide-react", "@fortawesome/fontawesome-free"],
   },
+  compress: true,
+  poweredByHeader: false,
   images: {
     remotePatterns: [
       {

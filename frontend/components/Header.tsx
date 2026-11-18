@@ -422,13 +422,30 @@ const Header = ({ theme, toggleTheme }: HeaderProps) => {
                 }}
               />
             </div>
-            <span className="header-username">
-              {getUserFullName?.()?.split(" ")[0] || "User"}
-              <ChevronDown
-                size={14}
-                className={`dropdown-chevron ${showAccountDropdown ? "rotate" : ""}`}
-              />
-            </span>
+            <div className="header-user-info">
+              <span className="header-username">
+                {getUserFullName?.()?.split(" ")[0] || "User"}
+                <ChevronDown
+                  size={14}
+                  className={`dropdown-chevron ${showAccountDropdown ? "rotate" : ""}`}
+                />
+              </span>
+              <span className="header-verified-badge">
+                <svg
+                  width="11"
+                  height="11"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M12 2l2.4 4.8L20 8l-4 3.9.9 5.6L12 15l-4.9 2.5.9-5.6L4 8l5.6-1.2L12 2z"
+                    fill="#3b82f6"
+                  />
+                </svg>
+                Verified Account
+              </span>
+            </div>
 
             {showAccountDropdown && (
               <div

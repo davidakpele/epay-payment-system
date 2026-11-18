@@ -23,6 +23,10 @@ import {
   Lightbulb,
   Trophy,
   Hand,
+  MoreHorizontal,
+  ShoppingBag,
+  Send,
+  ArrowUpDown,
 } from "lucide-react";
 import "./Dashboard.css";
 import Sidebar from "@/components/Sidebar";
@@ -30,7 +34,6 @@ import { Currency } from "../types/api";
 import Header from "@/components/Header";
 import News from "@/components/News";
 import History from "@/components/History";
-import Footer from "@/components/Footer";
 import MobileNav from "@/components/MobileNav";
 import DepositModal from "@/components/DepositModal";
 import WithdrawModal from "@/components/WithdrawModal";
@@ -54,8 +57,12 @@ import { eventEmitter } from "../utils/eventEmitter";
 import KycCheckProgress from "@/components/Kyc/page";
 import { UserSettings } from "../types/utils";
 import { Toast } from "../types/auth";
+import RightPanel from "@/components/RightPanel";
+import SendAbroadBanner from "@/components/SendAbroadBanner";
 import WelcomeModal from "@/components/WelcomeModal";
 import SupportChatBot from "@/components/SupportChatBot";
+import AllServicesDrawer from "@/components/AllServicesDrawer";
+import BillsDrawer from "@/components/BillsDrawer";
 
 const Dashboard = () => {
   const [_loading, setLoading] = useState(false);
@@ -81,6 +88,8 @@ const Dashboard = () => {
   const [isScrolling, setIsScrolling] = useState(false);
   const [isDepositOpen, setIsDepositOpen] = useState(false);
   const [isWithdrawOpen, setIsWithdrawOpen] = useState(false);
+  const [isAllServicesOpen, setIsAllServicesOpen] = useState(false);
+  const [isBillsDrawerOpen, setIsBillsDrawerOpen] = useState(false);
   const scrollTimer = useRef<NodeJS.Timeout | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [userProfile, setUserProfile] = useState<any>(null);
@@ -485,38 +494,73 @@ const Dashboard = () => {
       label: "Airtime",
       color: "#ff7a5c",
       route: "/services/bills/airtime",
+      isMore: false,
+      desktopOnly: false,
     },
     {
       icon: <Wifi />,
       label: "Data",
       color: "#5ecdbf",
       route: "/services/bills/data",
+      isMore: false,
+      desktopOnly: false,
     },
     {
       icon: <Tv />,
       label: "CableTv",
       color: "#5eb7cd",
       route: "/services/bills/cabletv",
+      isMore: false,
+      desktopOnly: false,
     },
     {
       icon: <Lightbulb />,
       label: "Electricity",
       color: "#ffac7a",
       route: "/services/bills/electricity",
-    },
-    {
-      icon: <CreditCard />,
-      label: "Virtual Card",
-      color: "#9adbb9",
-      route: "/cards",
+      isMore: false,
+      desktopOnly: false,
     },
     {
       icon: <Trophy />,
       label: "Betting",
       color: "#b5a1d5",
       route: "/services/bills/betting",
+      isMore: false,
+      desktopOnly: true,
     },
-    { icon: <Repeat />, label: "Swap", color: "#8ec5ed", route: "/exchange" },
+    {
+      icon: <ShoppingBag />,
+      label: "Shopping",
+      color: "#f472b6",
+      route: "/services/bills/shopping",
+      isMore: false,
+      desktopOnly: true,
+    },
+    {
+      icon: <Send />,
+      label: "Send Money",
+      color: "#0f172a",
+      route: "",
+      isMore: false,
+      desktopOnly: true,
+    },
+    {
+      icon: <ArrowUpDown />,
+      label: "Exchange",
+      color: "#8ec5ed",
+      route: "/exchange",
+      isMore: false,
+      desktopOnly: true,
+    },
+    {
+      icon: <MoreHorizontal />,
+      label: "More",
+      color: "#334155",
+      route: "",
+      isMore: true,
+      desktopOnly: false,
+    },
   ];
 
   const userRecord = userProfile?.records?.[0] || {};
@@ -707,8 +751,12 @@ const Dashboard = () => {
               {quickActions.map((action, idx) => (
                 <div
                   key={idx}
-                  className="feature-card"
-                  onClick={() => router.push(action.route)}
+                  className={`feature-card${action.desktopOnly ? " feature-card--desktop-only" : ""}`}
+                  onClick={() =>
+                    action.isMore
+                      ? setIsAllServicesOpen(true)
+                      : router.push(action.route)
+                  }
                 >
                   <div
                     className="feature-icon-wrapper"
@@ -748,7 +796,7 @@ const Dashboard = () => {
             </div>
           </div>
 
-          <Footer theme={theme} />
+          <SendAbroadBanner theme={theme} />
         </div>
       </main>
 
@@ -801,7 +849,21 @@ const Dashboard = () => {
         </div>
       )}
 
-      <MobileNav activeTab="home" onPlusClick={() => setIsDepositOpen(true)} />
+      <MobileNav
+        activeTab="home"
+        onPlusClick={() => setIsDepositOpen(true)}
+        onBillsClick={() => setIsBillsDrawerOpen(true)}
+      />
+
+      <AllServicesDrawer
+        open={isAllServicesOpen}
+        onClose={() => setIsAllServicesOpen(false)}
+      />
+
+      <BillsDrawer
+        open={isBillsDrawerOpen}
+        onClose={() => setIsBillsDrawerOpen(false)}
+      />
       <Suspense>
         <DepositModal
           isOpen={isDepositOpen}
@@ -831,6 +893,10 @@ const Dashboard = () => {
       <SupportChatBot
         isOpen={isChatOpen}
         onClose={() => setIsChatOpen(false)}
+      />
+      <RightPanel
+        walletBalances={wallet?.wallet_balances ?? []}
+        theme={theme}
       />
     </div>
   );

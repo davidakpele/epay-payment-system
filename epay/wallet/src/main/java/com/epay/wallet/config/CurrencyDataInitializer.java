@@ -37,13 +37,12 @@ public class CurrencyDataInitializer implements ApplicationRunner {
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
-        long existing = currencyRepository.count();
-        if (existing > 0) {
-            log.info("[CurrencyInit] {} currencies already in DB — skipping seed", existing);
-            return;
-        }
-
+        int seeded = 0;
         for (CurrencyDef def : CURRENCIES) {
+            if (currencyRepository.existsByCodeIgnoreCase(def.code())) {
+                log.debug("[CurrencyInit] Currency {} already exists — skipping", def.code());
+                continue;
+            }
             SupportedCurrency currency = SupportedCurrency.builder()
                     .code(def.code())
                     .symbol(def.symbol())
@@ -57,9 +56,14 @@ public class CurrencyDataInitializer implements ApplicationRunner {
                     .minWithdrawal(new BigDecimal("1.00"))
                     .build();
             currencyRepository.save(currency);
+            seeded++;
         }
 
-        log.info("[CurrencyInit] Seeded {} currencies successfully", CURRENCIES.size());
+        if (seeded > 0) {
+            log.info("[CurrencyInit] Seeded {} currencies successfully", seeded);
+        } else {
+            log.info("[CurrencyInit] All {} currencies already present — skipping seed", CURRENCIES.size());
+        }
     }
 
     private record CurrencyDef(

@@ -12,12 +12,11 @@ on:
       - "epay/**"
       - ".github/workflows/backend-ci.yml"
 env:
-  REGISTRY:   ghcr.io
+  REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}/epay-server
   JAVA_VERSION: "21"
 
 jobs:
-
   unit-test:
     name: Unit Tests & Coverage (Java 21)
     runs-on: ubuntu-latest
@@ -67,7 +66,7 @@ jobs:
           name: jacoco-coverage
           path: epay/**/target/site/jacoco/
           retention-days: 7
-# 
+      #
       - name: Build fat-JAR (skip tests — already ran above)
         working-directory: epay
         run: ./mvnw -B package -DskipTests --no-transfer-progress
@@ -133,8 +132,8 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_DB:       epay
-          POSTGRES_USER:     epay
+          POSTGRES_DB: epay
+          POSTGRES_USER: epay
           POSTGRES_PASSWORD: epay
         ports:
           - 5432:5432
@@ -152,16 +151,36 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-      rabbitmq:
-        image: rabbitmq:3.13-alpine
-        ports:
-          - 5672:5672
+      zookeeper:
+        image: confluentinc/cp-zookeeper:7.6.1
+        env:
+          ZOOKEEPER_CLIENT_PORT: 2181
+          ZOOKEEPER_TICK_TIME: 2000
         options: >-
-          --health-cmd "rabbitmq-diagnostics ping"
+          --health-cmd "bash -c 'echo ruok | timeout 2 bash -c \"cat > /dev/tcp/localhost/2181\" && echo ok'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+          --health-start-period 30s
+      kafka:
+        image: confluentinc/cp-kafka:7.6.1
+        env:
+          KAFKA_BROKER_ID: 1
+          KAFKA_ZOOKEEPER_CONNECT: localhost:2181
+          KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
+          KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+          KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+          KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+          KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+          KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+        ports:
+          - 9092:9092
+        options: >-
+          --health-cmd "kafka-broker-api-versions --bootstrap-server localhost:9092"
           --health-interval 10s
           --health-timeout 10s
           --health-retries 10
-          --health-start-period 30s
+          --health-start-period 40s
 
     steps:
       - name: Checkout code
@@ -192,7 +211,7 @@ jobs:
             --spring.datasource.username=epay \
             --spring.datasource.password=epay \
             --spring.data.redis.host=localhost \
-            --spring.rabbitmq.host=localhost \
+            --spring.kafka.bootstrap-servers=localhost:9092 \
             --server.port=8029 &
           # Wait until actuator/health returns UP
           echo "Waiting for app to start..."

@@ -1,4 +1,3 @@
-
 logging:
   file:
     path: ${java.io.tmpdir}/epay-logs
@@ -21,11 +20,13 @@ flutterwave:
   secret-key: ${FLUTTERWAVE_SECRET_KEY:}
 
 spring:
-  rabbitmq:
-    host: ${SPRING_RABBITMQ_HOST:localhost}
+  flyway:
+    enabled: false
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
   data:
     redis:
       host: ${REDIS_HOST:localhost}
   health:
-    rabbit:
+    mail:
       enabled: false

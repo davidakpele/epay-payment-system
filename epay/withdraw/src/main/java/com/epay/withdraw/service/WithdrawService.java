@@ -113,7 +113,7 @@ public class WithdrawService {
                             currency, previousBalance, currency, totalDebit, fee));
 
         if (!walletPort.verifyPin(userId, request.getTransferPin()))
-            return errorHandler.error("Invalid transaction PIN", HttpStatus.NETWORK_AUTHENTICATION_REQUIRED,
+            return errorHandler.error("Invalid transaction PIN", HttpStatus.BAD_REQUEST,
                     "The transaction PIN you entered is incorrect.");
 
         Long   walletId  = walletPort.getWalletId(userId);
@@ -124,15 +124,15 @@ public class WithdrawService {
 
         if (transactionsAgent.isHighVolumeOrFrequentTransactions(
                 userId, email, firstName, lastName, walletId))
-            return errorHandler.error("Transaction blocked", HttpStatus.NETWORK_AUTHENTICATION_REQUIRED,
+            return errorHandler.error("Transaction blocked", HttpStatus.BAD_REQUEST,
                     "Suspicious high-volume activity detected. Wallet temporarily blocked.");
 
         if (transactionsAgent.isNewAccountAndHighRisk(request.getUsername()))
-            return errorHandler.error("Transaction blocked", HttpStatus.NETWORK_AUTHENTICATION_REQUIRED,
+            return errorHandler.error("Transaction blocked", HttpStatus.BAD_REQUEST,
                     "New accounts cannot perform withdrawals immediately after registration.");
 
         if (transactionsAgent.isFraudulentBehavior(userId, email, firstName, lastName, walletId))
-            return errorHandler.error("Transaction blocked", HttpStatus.NETWORK_AUTHENTICATION_REQUIRED,
+            return errorHandler.error("Transaction blocked", HttpStatus.BAD_REQUEST,
                     "Fraudulent activity pattern detected. Account suspended pending review.");
 
         String reference     = generateReference(request.getWithdrawalType(), userId);

@@ -12,4 +12,6 @@ public interface IUserTracerService {
     void deleteByUserId(Long userId);
 
     boolean isSessionValid(String sessionId);
+
+    void renewSession(String sessionId, Long userId);
 }

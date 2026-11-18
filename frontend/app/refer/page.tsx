@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useMemo } from "react";
 import DepositModal from "@/components/DepositModal";
-import Footer from "@/components/Footer";
 import Header from "@/components/Header";
 import MobileNav from "@/components/MobileNav";
 import Sidebar from "@/components/Sidebar";
+import RightPanel from "@/components/RightPanel";
 import Link from "next/link";
 import {
   Search,
@@ -528,9 +528,9 @@ const Refer = () => {
             </div>
           )}
 
-          <Footer theme={theme} />
         </div>
       </main>
+      <RightPanel theme={theme} />
 
       <MobileNav activeTab="none" onPlusClick={() => setIsDepositOpen(true)} />
       <DepositModal

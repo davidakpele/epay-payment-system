@@ -365,6 +365,7 @@ export default function Default() {
       const response = await authService.login(formData);
       const payload = {
         token: response.jwt,
+        refreshToken: response.refreshToken || "",
         username: response.username,
         userId: response.userId,
         email: response.email,
@@ -636,6 +637,7 @@ export default function Default() {
         .then((response) => {
           const payload = {
             token: response.jwt,
+            refreshToken: response.refreshToken || "",
             username: response.username,
             userId: response.userId,
             email: response.email,
@@ -1590,36 +1592,6 @@ export default function Default() {
               </div>
             </div>
           </section>
-
-          {/* ── FOOTER ── */}
-          <footer className={styles.footer}>
-            <div className={styles.footerSocial}>
-              <a className={styles.socialBtn} href="#" aria-label="Facebook">
-                f
-              </a>
-              <a className={styles.socialBtn} href="#" aria-label="Twitter">
-                𝕏
-              </a>
-              <a className={styles.socialBtn} href="#" aria-label="Instagram">
-                ◎
-              </a>
-              <a className={styles.socialBtn} href="#" aria-label="YouTube">
-                ▶
-              </a>
-              <a className={styles.socialBtn} href="#" aria-label="LinkedIn">
-                in
-              </a>
-            </div>
-            <div className={styles.footerLinks}>
-              <a href="#">Account Opening T&amp;C</a>
-              <a href="#">Site Terms &amp; Conditions</a>
-              <a href="#">Privacy Policy</a>
-            </div>
-            <div className={styles.footerCopy}>
-              | © 2025. All Rights Reserved. &nbsp;
-              <span className={styles.footerBrand}>Kashly</span>
-            </div>
-          </footer>
         </section>
       </div>
     </>

@@ -15,7 +15,6 @@ import {
 import "./UserProfile.css";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
-import Footer from "@/components/Footer";
 import MobileNav from "@/components/MobileNav";
 import DepositModal from "@/components/DepositModal";
 import LoadingScreen from "@/components/loader/Loadingscreen";
@@ -654,7 +653,7 @@ const UserProfile = () => {
   return (
     <>
       <div
-        className={`dashboard-container ${theme === "dark" ? "dark" : "light"}`}
+        className={`dashboard-container no-right-panel ${theme === "dark" ? "dark" : "light"}`}
       >
         <Sidebar />
 
@@ -1651,7 +1650,6 @@ const UserProfile = () => {
                 </>
               )}
             </div>
-            <Footer theme={theme} />
           </div>
         </main>
         <MobileNav

@@ -63,7 +63,7 @@ Managing money in Africa involves fragmented tools: one app for bank transfers, 
 
 | Technology            | Version                    | Purpose                                 |
 | --------------------- | -------------------------- | --------------------------------------- |
-| Java                  | 21                         | Runtime — virtual thread capable      |
+| Java                  | 21                         | Runtime — virtual thread capable        |
 | Spring Boot           | 4.1.0                      | Framework                               |
 | Spring Security       | 6 + OAuth2 Resource Server | Authentication & authorization          |
 | PostgreSQL            | 16                         | Primary relational database             |
@@ -100,17 +100,17 @@ Managing money in Africa involves fragmented tools: one app for bank transfers, 
 
 ### Infrastructure
 
-| Service           | Image                                     | Purpose                                  |
-| ----------------- | ----------------------------------------- | ---------------------------------------- |
-| Nginx             | 1.27-alpine                               | Reverse proxy + WAF + load balancer      |
-| PostgreSQL        | 16-alpine                                 | Primary relational database              |
-| Redis             | 7-alpine                                  | Cache + sessions (LRU, 256 MB cap)       |
-| RabbitMQ          | 3.13-management-alpine                    | Async message broker                     |
-| Zipkin            | latest                                    | Distributed tracing                      |
-| Prometheus        | v2.51.2                                   | Metrics scraping (15-day retention)      |
-| Grafana           | 10.4.2                                    | Metrics dashboards (port 3010)           |
-| Loki              | custom build (`epay/monitoring/loki`)     | Log aggregation                          |
-| Promtail          | custom build (`epay/monitoring/promtail`) | Log shipping (Docker + app logs)         |
+| Service           | Image                                     | Purpose                                |
+| ----------------- | ----------------------------------------- | -------------------------------------- |
+| Nginx             | 1.27-alpine                               | Reverse proxy + WAF + load balancer    |
+| PostgreSQL        | 16-alpine                                 | Primary relational database            |
+| Redis             | 7-alpine                                  | Cache + sessions (LRU, 256 MB cap)     |
+| RabbitMQ          | 3.13-management-alpine                    | Async message broker                   |
+| Zipkin            | latest                                    | Distributed tracing                    |
+| Prometheus        | v2.51.2                                   | Metrics scraping (15-day retention)    |
+| Grafana           | 10.4.2                                    | Metrics dashboards (port 3010)         |
+| Loki              | custom build (`epay/monitoring/loki`)     | Log aggregation                        |
+| Promtail          | custom build (`epay/monitoring/promtail`) | Log shipping (Docker + app logs)       |
 | postgres-exporter | prometheuscommunity/postgres-exporter     | PostgreSQL → Prometheus metrics (9187) |
 | redis-exporter    | oliver006/redis_exporter:v1.62.0          | Redis → Prometheus metrics (9121)      |
 | nginx-exporter    | nginx/nginx-prometheus-exporter:1.1.0     | Nginx stub_status → Prometheus (9113)  |
@@ -698,23 +698,23 @@ All `depends_on` conditions use `condition: service_healthy` — services only s
 
 ### Services, Images & Ports
 
-| Service             | Image                                            | Host Port(s) | Container Port | Role                                              |
-| ------------------- | ------------------------------------------------ | ------------ | -------------- | ------------------------------------------------- |
-| `postgres`          | `postgres:16-alpine`                             | 5432         | 5432           | Primary relational database                       |
-| `redis`             | `redis:7-alpine`                                 | 6379         | 6379           | Session store, rate-limit state, cache            |
-| `rabbitmq`          | `rabbitmq:3.13-management-alpine`                | 5672, 15672  | 5672, 15672    | Async message broker + management UI              |
-| `zipkin`            | `openzipkin/zipkin:latest`                       | 9411         | 9411           | Distributed tracing (in-memory storage)           |
+| Service             | Image                                            | Host Port(s) | Container Port | Role                                            |
+| ------------------- | ------------------------------------------------ | ------------ | -------------- | ----------------------------------------------- |
+| `postgres`          | `postgres:16-alpine`                             | 5432         | 5432           | Primary relational database                     |
+| `redis`             | `redis:7-alpine`                                 | 6379         | 6379           | Session store, rate-limit state, cache          |
+| `rabbitmq`          | `rabbitmq:3.13-management-alpine`                | 5672, 15672  | 5672, 15672    | Async message broker + management UI            |
+| `zipkin`            | `openzipkin/zipkin:latest`                       | 9411         | 9411           | Distributed tracing (in-memory storage)         |
 | `epay-server-1`     | `epay-server:latest` (built from `./epay`)       | **8021**     | 8029           | Backend replica 1 — `INSTANCE_ID=epay-server-1` |
 | `epay-server-2`     | `epay-server:latest`                             | **8022**     | 8029           | Backend replica 2 — `INSTANCE_ID=epay-server-2` |
 | `epay-server-3`     | `epay-server:latest`                             | **8023**     | 8029           | Backend replica 3 — `INSTANCE_ID=epay-server-3` |
-| `frontend-1`        | `epay-frontend:latest` (built from `./frontend`) | **3001**     | 3000           | Next.js replica 1                                 |
-| `frontend-2`        | `epay-frontend:latest`                           | **3002**     | 3000           | Next.js replica 2                                 |
-| `frontend-3`        | `epay-frontend:latest`                           | **3003**     | 3000           | Next.js replica 3                                 |
-| `nginx`             | `epay-nginx:latest` (built from `./nginx`)       | **80**, 443  | 80, 443        | Reverse proxy + WAF + load balancer               |
-| `prometheus`        | `epay-prometheus:latest`                         | 9090         | 9090           | Metrics scraping (15-day retention)               |
-| `grafana`           | `epay-grafana:latest`                            | **3010**     | 3000           | Dashboards (provisioned from files)               |
-| `loki`              | `epay-loki:latest`                               | 3100         | 3100           | Log aggregation backend                           |
-| `promtail`          | `epay-promtail:latest`                           | —          | —            | Ships Docker container logs + app logs to Loki    |
+| `frontend-1`        | `epay-frontend:latest` (built from `./frontend`) | **3001**     | 3000           | Next.js replica 1                               |
+| `frontend-2`        | `epay-frontend:latest`                           | **3002**     | 3000           | Next.js replica 2                               |
+| `frontend-3`        | `epay-frontend:latest`                           | **3003**     | 3000           | Next.js replica 3                               |
+| `nginx`             | `epay-nginx:latest` (built from `./nginx`)       | **80**, 443  | 80, 443        | Reverse proxy + WAF + load balancer             |
+| `prometheus`        | `epay-prometheus:latest`                         | 9090         | 9090           | Metrics scraping (15-day retention)             |
+| `grafana`           | `epay-grafana:latest`                            | **3010**     | 3000           | Dashboards (provisioned from files)             |
+| `loki`              | `epay-loki:latest`                               | 3100         | 3100           | Log aggregation backend                         |
+| `promtail`          | `epay-promtail:latest`                           | —            | —              | Ships Docker container logs + app logs to Loki  |
 | `postgres-exporter` | `prometheuscommunity/postgres-exporter`          | 9187         | 9187           | PostgreSQL → Prometheus metrics                 |
 | `redis-exporter`    | `oliver006/redis_exporter:v1.62.0`               | 9121         | 9121           | Redis → Prometheus metrics                      |
 | `nginx-exporter`    | `nginx/nginx-prometheus-exporter:1.1.0`          | 9113         | 9113           | Nginx stub_status → Prometheus metrics          |
@@ -758,7 +758,7 @@ The same `&frontend-base` anchor pattern is used for `frontend-1/2/3`.
 | Service         | Command                                           | Interval | Retries | Start Period |
 | --------------- | ------------------------------------------------- | -------- | ------- | ------------ |
 | `postgres`      | `pg_isready -U $DB_USERNAME -d epay`              | 10s      | 5       | 20s          |
-| `redis`         | `redis-cli ping`                                  | 10s      | 5       | —          |
+| `redis`         | `redis-cli ping`                                  | 10s      | 5       | —            |
 | `rabbitmq`      | `rabbitmq-diagnostics check_port_connectivity`    | 10s      | 5       | 30s          |
 | `epay-server-*` | `wget -qO- http://localhost:8029/actuator/health` | 30s      | 3       | **60s**      |
 | `frontend-*`    | `wget -qO- http://localhost:3000`                 | 30s      | 3       | 40s          |
@@ -838,12 +838,12 @@ The `app_uploads` volume is shared read-write across all three backend instances
 
 Every service sets JSON log rotation via Docker's `json-file` driver to prevent disk exhaustion:
 
-| Service group                          | Max file size | Max files | Max total    |
-| -------------------------------------- | ------------- | --------- | ------------ |
-| postgres, redis, rabbitmq, epay-server | 50 MB         | 3–5     | 150–250 MB |
-| nginx                                  | 10 MB         | 5         | 50 MB        |
-| grafana, prometheus, loki, promtail    | 20 MB         | 3         | 60 MB        |
-| exporters                              | 10 MB         | 2         | 20 MB        |
+| Service group                          | Max file size | Max files | Max total  |
+| -------------------------------------- | ------------- | --------- | ---------- |
+| postgres, redis, rabbitmq, epay-server | 50 MB         | 3–5       | 150–250 MB |
+| nginx                                  | 10 MB         | 5         | 50 MB      |
+| grafana, prometheus, loki, promtail    | 20 MB         | 3         | 60 MB      |
+| exporters                              | 10 MB         | 2         | 20 MB      |
 
 ### Backend Docker Build
 
@@ -865,7 +865,7 @@ The JAR is read from `main/target/*.jar`. You must rebuild the JAR whenever back
 | Zipkin          | http://localhost:9411                                           | Distributed traces via Micrometer + Brave        |
 | Prometheus      | http://localhost:9090                                           | Scrapes metrics every 15s, 15-day retention      |
 | Grafana         | http://localhost:3010                                           | Dashboards auto-provisioned from `provisioning/` |
-| Loki            | http://localhost:3100                                           | Log aggregation — queried through Grafana      |
+| Loki            | http://localhost:3100                                           | Log aggregation — queried through Grafana        |
 | Spring Actuator | `/actuator/health`, `/actuator/metrics`, `/actuator/prometheus` | Per-instance health and metrics                  |
 
 See the dedicated [Observability](#observability) section for the full breakdown of every dashboard, alert rule, trace pipeline, and log configuration.
@@ -874,7 +874,7 @@ See the dedicated [Observability](#observability) section for the full breakdown
 
 | File                   | Contents                                                        |
 | ---------------------- | --------------------------------------------------------------- |
-| `access.log`           | All requests — JSON combined format                           |
+| `access.log`           | All requests — JSON combined format                             |
 | `security.log`         | All requests with JWT status and suspicious flag                |
 | `error.log`            | Nginx errors at `warn` level and above                          |
 | `auth.log`             | Auth + receipt endpoint requests                                |
@@ -991,7 +991,7 @@ Grafana is provisioned entirely from files — no manual dashboard setup is need
 
 | Name         | Type       | URL                      | Default | Notes                                       |
 | ------------ | ---------- | ------------------------ | ------- | ------------------------------------------- |
-| `Prometheus` | Prometheus | `http://prometheus:9090` | ✅ Yes | `timeInterval: 15s` matches scrape interval |
+| `Prometheus` | Prometheus | `http://prometheus:9090` | ✅ Yes  | `timeInterval: 15s` matches scrape interval |
 | `Loki`       | Loki       | `http://loki:3100`       | No      | Two derived fields configured (see below)   |
 
 **Loki derived fields** — these turn raw log text into clickable links:
@@ -1026,18 +1026,18 @@ Monitors the health, performance, and resource usage of the Spring Boot backend 
 
 **Time-series panels**
 
-| Panel                             | What it shows                                                                                            |
-| --------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| HTTP Request Rate                 | Request throughput over time, broken down per instance                                                   |
+| Panel                             | What it shows                                                                                          |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| HTTP Request Rate                 | Request throughput over time, broken down per instance                                                 |
 | HTTP Response Status Distribution | Stacked area of 2xx / 4xx / 5xx counts per instance — makes error spikes immediately visible           |
-| P50 / P95 / P99 Latency           | Three percentile lines together; divergence between P50 and P99 indicates tail latency problems          |
+| P50 / P95 / P99 Latency           | Three percentile lines together; divergence between P50 and P99 indicates tail latency problems        |
 | Slow Endpoints (p99 > 500ms)      | Highlights specific endpoint paths exceeding the 500ms p99 threshold — pinpoints which routes are slow |
 | JVM Heap Memory                   | Used vs committed heap over time — shows GC pressure and memory growth trends                          |
 | JVM Non-Heap Memory               | Metaspace and code cache usage — catches class loader leaks                                            |
 | GC Pause Time                     | `jvm_gc_pause_seconds` — GC stop-the-world pauses; sustained high values indicate heap pressure        |
 | JVM Threads                       | Live, daemon, and peak thread counts — thread pool exhaustion shows up here                            |
 | HikariCP DB Connection Pool       | Active vs idle vs pending connections — exhaustion means the pool is undersized or leaking             |
-| CPU & System Load                 | Process CPU vs system CPU vs 1-minute load average                                                       |
+| CPU & System Load                 | Process CPU vs system CPU vs 1-minute load average                                                     |
 | Active HTTP Threads (Tomcat)      | Tomcat executor threads currently processing requests — thread pool saturation                         |
 | Open File Descriptors             | OS-level file descriptor count — useful for detecting connection/socket leaks                          |
 
@@ -1060,19 +1060,19 @@ Tracks every request that hits Nginx: what came in, what was blocked, what succe
 
 **Time-series panels**
 
-| Panel                   | What it shows                                                                                  |
-| ----------------------- | ---------------------------------------------------------------------------------------------- |
+| Panel                   | What it shows                                                                                |
+| ----------------------- | -------------------------------------------------------------------------------------------- |
 | Request Rate Over Time  | Total requests/sec over the selected time window — shows traffic spikes and quiet periods    |
 | Requests by HTTP Status | Stacked line chart of 2xx / 3xx / 4xx / 5xx over time — each status code gets its own colour |
 
 **Log stream panels (live, scrolling)**
 
-| Panel                                | Loki query                                  | What it shows                                                                                |
-| ------------------------------------ | ------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| Live Request Log Stream              | All entries from `access.log`               | Every request as it arrives: method, URI, status, response time, request ID, upstream time   |
+| Panel                                | Loki query                                  | What it shows                                                                              |
+| ------------------------------------ | ------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| Live Request Log Stream              | All entries from `access.log`               | Every request as it arrives: method, URI, status, response time, request ID, upstream time |
 | Blocked / Security Rejected Requests | Entries from `security_blocked.log`         | Every request blocked by the WAF — attack type, pattern matched, client IP, request URI    |
 | 5xx Server Errors                    | `access.log` filtered to `status >= 500`    | Only the failing requests — upstream error, response time, which backend replica served it |
-| Application Log — WARN / ERROR     | Spring Boot app logs at WARN or ERROR level | Backend exceptions, validation failures, service errors — with traceId visible in the line |
+| Application Log — WARN / ERROR       | Spring Boot app logs at WARN or ERROR level | Backend exceptions, validation failures, service errors — with traceId visible in the line |
 
 The **Blocked / Security Rejected Requests** panel is the primary security visibility tool. Every WAF block (SQL injection, XSS, path traversal, bot detection, scanner paths) writes a JSON entry to `security_blocked.log` with the block code (`SQLI_BLOCKED`, `XSS_BLOCKED`, `PATH_TRAVERSAL_BLOCKED`, etc.), the client IP, the exact URI that triggered it, and the `request_id`. You can click a `TraceID` derived field link in any log panel to jump directly to the corresponding trace in Zipkin.
 
@@ -1241,9 +1241,9 @@ All services — postgres, redis, rabbitmq, nginx, spring boot, grafana — thei
 **2. Application logs** (from the `epay_logs` shared volume at `/var/log/epay`)  
 The Spring Boot app writes structured log files here:
 
-| File        | Contents                                                                                                    |
-| ----------- | ----------------------------------------------------------------------------------------------------------- |
-| `app.log`   | All application log lines with `[traceId,spanId]` correlation prefix                                        |
+| File        | Contents                                                                                                  |
+| ----------- | --------------------------------------------------------------------------------------------------------- |
+| `app.log`   | All application log lines with `[traceId,spanId]` correlation prefix                                      |
 | `audit.log` | One JSON object per line — every authenticated API request with userId, method, URI, status, duration, IP |
 
 #### Nginx Logs in Loki
@@ -1291,8 +1291,8 @@ Config is modular — `nginx.conf` loads global maps and upstream definitions fi
 | `reset_timedout_connection`   | `on`                   | Frees resources from timed-out clients immediately        |
 | `server_tokens`               | `off`                  | Hides nginx version from responses                        |
 | `sendfile` / `tcp_nopush`     | `on`                   | Zero-copy static file delivery                            |
-| `large_client_header_buffers` | `8 × 16k`             | Handles large JWT Authorization headers                   |
-| `proxy_buffer_size`           | `32k` / `8 × 32k`     | Buffers upstream response headers and body                |
+| `large_client_header_buffers` | `8 × 16k`              | Handles large JWT Authorization headers                   |
+| `proxy_buffer_size`           | `32k` / `8 × 32k`      | Buffers upstream response headers and body                |
 
 **Real IP unwrapping:**
 
@@ -1377,20 +1377,20 @@ POST / PUT / PATCH / DELETE requests always reach the backend — mutations are 
 
 #### Per-Route TTL Table
 
-| Location                                         | Cache Zone          | TTL (200/304)  | TTL (404) | Key              | Notes                                        |
-| ------------------------------------------------ | ------------------- | -------------- | --------- | ---------------- | -------------------------------------------- |
-| `/api/v1/wallet/currencies`                      | `wallet_cache`      | **12 hours**   | 30s       | Public (no auth) | Currency list never changes                  |
+| Location                                         | Cache Zone          | TTL (200/304)  | TTL (404) | Key              | Notes                                      |
+| ------------------------------------------------ | ------------------- | -------------- | --------- | ---------------- | ------------------------------------------ |
+| `/api/v1/wallet/currencies`                      | `wallet_cache`      | **12 hours**   | 30s       | Public (no auth) | Currency list never changes                |
 | `/api/v1/wallet/*` (balances etc.)               | `wallet_cache`      | **30 seconds** | 5s        | Per-user         | Financial data — short TTL                 |
-| `/api/v1/history/{id}` (single record)           | `history_cache`     | **5 minutes**  | 30s       | Per-user         | Settled transactions are immutable           |
-| `/api/v1/history/` (paginated list)              | `history_cache`     | **1 minute**   | 10s       | Per-user         | Append-only, mostly stable                   |
-| `/api/v1/user/`                                  | `user_data_cache`   | **2 minutes**  | 10s       | Per-user         | Profile and account data                     |
-| `/api/v1/beneficiaries/`                         | `beneficiary_cache` | **5 minutes**  | 10s       | Per-user         | Changes infrequently                         |
-| `/api/v1/bank`                                   | `bank_cache`        | **5 minutes**  | 10s       | Per-user         | Linked bank accounts                         |
-| `/api/v1/settings`                               | `settings_cache`    | **5 minutes**  | 10s       | Per-user         | Preferences rarely change                    |
-| `/api/v1/support/` (FAQs, articles)              | `support_cache`     | **10 minutes** | 30s       | Public (no auth) | Near-static content                          |
+| `/api/v1/history/{id}` (single record)           | `history_cache`     | **5 minutes**  | 30s       | Per-user         | Settled transactions are immutable         |
+| `/api/v1/history/` (paginated list)              | `history_cache`     | **1 minute**   | 10s       | Per-user         | Append-only, mostly stable                 |
+| `/api/v1/user/`                                  | `user_data_cache`   | **2 minutes**  | 10s       | Per-user         | Profile and account data                   |
+| `/api/v1/beneficiaries/`                         | `beneficiary_cache` | **5 minutes**  | 10s       | Per-user         | Changes infrequently                       |
+| `/api/v1/bank`                                   | `bank_cache`        | **5 minutes**  | 10s       | Per-user         | Linked bank accounts                       |
+| `/api/v1/settings`                               | `settings_cache`    | **5 minutes**  | 10s       | Per-user         | Preferences rarely change                  |
+| `/api/v1/support/` (FAQs, articles)              | `support_cache`     | **10 minutes** | 30s       | Public (no auth) | Near-static content                        |
 | `/_next/static/`                                 | `static_assets`     | **1 year**     | 30s       | Public           | Content-hashed filenames — immutable       |
-| `/_next/` (other Next.js assets)                 | `static_assets`     | **1 hour**     | 30s       | Public           | Non-immutable Next.js assets                 |
-| `/uploads/images/` and `/api/v1/uploads/images/` | `static_assets`     | **1 day**      | 30s       | Public           | User-uploaded images                         |
+| `/_next/` (other Next.js assets)                 | `static_assets`     | **1 hour**     | 30s       | Public           | Non-immutable Next.js assets               |
+| `/uploads/images/` and `/api/v1/uploads/images/` | `static_assets`     | **1 day**      | 30s       | Public           | User-uploaded images                       |
 | `/` (frontend catch-all)                         | `frontend_pages`    | **1 second**   | 5s        | Public           | Microcache — authenticated requests bypass |
 
 #### Stale Content
@@ -1479,16 +1479,16 @@ Files in `nginx/conf.d/` are included in this order:
 
 | File                              | Included in         | Purpose                                                                                     |
 | --------------------------------- | ------------------- | ------------------------------------------------------------------------------------------- |
-| `01-security-headers.conf`        | `nginx.conf` (http) | All response security headers (HSTS, CSP, Permissions-Policy…)                            |
+| `01-security-headers.conf`        | `nginx.conf` (http) | All response security headers (HSTS, CSP, Permissions-Policy…)                              |
 | `02-rate-limiting.conf`           | `nginx.conf` (http) | Rate-limit zone definitions and body-size map                                               |
 | `03-bot-detection.conf`           | `nginx.conf` (http) | `$is_malicious`, `$is_suspicious`, `$jwt_status`, `$admin_access`, `$maintenance_mode` maps |
 | `04-upstreams.conf`               | `nginx.conf` (http) | `epay_backend`, `epay_frontend`, `epay_websocket`, `epay_admin` upstreams                   |
 | `11-content-cache.conf`           | `nginx.conf` (http) | All 10 proxy cache zone declarations + bypass maps                                          |
-| `globalblacklist.conf`            | `nginx.conf` (http) | 500+ known-bad UA strings — sets `$bad_bot`                                               |
+| `globalblacklist.conf`            | `nginx.conf` (http) | 500+ known-bad UA strings — sets `$bad_bot`                                                 |
 | `12-stub-status.conf`             | `nginx.conf` (http) | Dedicated port-8080 server block for Nginx stub_status                                      |
-| `05-server-http.conf`             | `nginx.conf` (http) | HTTP → HTTPS 301 redirect + ACME `/.well-known/` challenge path                           |
-| `06-server-https.conf`            | `nginx.conf` (http) | Main server block — all location routing                                                  |
-| `07-error-pages.conf`             | inside server block | Named error locations — JSON responses for 400–504                                      |
+| `05-server-http.conf`             | `nginx.conf` (http) | HTTP → HTTPS 301 redirect + ACME `/.well-known/` challenge path                             |
+| `06-server-https.conf`            | `nginx.conf` (http) | Main server block — all location routing                                                    |
+| `07-error-pages.conf`             | inside server block | Named error locations — JSON responses for 400–504                                          |
 | `08-security-blocks.conf`         | inside server block | WAF location-level regex deny rules                                                         |
 | `09-administrative-security.conf` | inside server block | Extra hardening on `/admin/*` direct paths                                                  |
 | `10-health-checks.conf`           | inside server block | `/nginx-health`, `/backend-health`, `/metrics` endpoints                                    |
@@ -1557,20 +1557,20 @@ Currently configured for port 80 to support local development. For production, c
 
 **Per-location routing table:**
 
-| Nginx Location                     | Backend Path                    | Rate Zone(s)                          | Max Body | Methods                       | Log File             |
-| ---------------------------------- | ------------------------------- | ------------------------------------- | -------- | ----------------------------- | -------------------- |
+| Nginx Location                     | Backend Path                  | Rate Zone(s)                          | Max Body | Methods                       | Log File             |
+| ---------------------------------- | ----------------------------- | ------------------------------------- | -------- | ----------------------------- | -------------------- |
 | `/api/v1/auth/`                    | `/auth/…`                     | `auth_limit` (10/min) + `per_user`    | 10 KB    | GET, POST                     | `auth.log`           |
 | `/api/v1/user/`                    | `/user/…`                     | `user_api_limit` (5/s)                | 10 MB    | GET, POST, PUT, DELETE, PATCH | `user.log`           |
 | `/api/v1/bank`                     | `/bank/…`                     | `user_api_limit`                      | 10 KB    | GET, POST, DELETE             | `user.log`           |
 | `/api/v1/settings`                 | `/settings/…`                 | `user_api_limit`                      | 10 MB    | GET, POST, DELETE             | `user.log`           |
 | `/api/v1/kyc/`                     | `/kyc/…`                      | `api_limit`                           | 15 MB    | GET, POST                     | `kyc.log`            |
-| `/api/v1/wallet/currencies`        | `/wallet/currencies`            | `api_limit`                           | —      | GET                           | `wallet.log`         |
+| `/api/v1/wallet/currencies`        | `/wallet/currencies`          | `api_limit`                           | —        | GET                           | `wallet.log`         |
 | `/api/v1/wallet/`                  | `/wallet/…`                   | `api_limit` + `per_user`              | 10 KB    | GET, POST, PUT, DELETE, PATCH | `wallet.log`         |
 | `/api/v1/bills/`                   | `/bills/…`                    | `strict_limit` (5/s) + `per_user`     | 10 KB    | POST only                     | `transactions.log`   |
 | `/api/v1/deposit/`                 | `/deposit/…`                  | `strict_limit` + `per_user`           | 10 KB    | GET, POST                     | `transactions.log`   |
 | `/api/v1/withdrawals/`             | `/withdrawals/…`              | `strict_limit` + `per_user` (burst=3) | 10 KB    | GET, POST                     | `transactions.log`   |
-| `/api/v1/history/{id}` (regex)     | `/history/{id}`                 | `api_limit` + `per_user`              | —      | GET only                      | `transactions.log`   |
-| `/api/v1/history/`                 | `/history/…`                  | `api_limit` + `per_user`              | —      | GET only                      | `transactions.log`   |
+| `/api/v1/history/{id}` (regex)     | `/history/{id}`               | `api_limit` + `per_user`              | —        | GET only                      | `transactions.log`   |
+| `/api/v1/history/`                 | `/history/…`                  | `api_limit` + `per_user`              | —        | GET only                      | `transactions.log`   |
 | `/api/v1/beneficiaries/`           | `/beneficiaries/…`            | `api_limit`                           | 10 KB    | GET, POST, PUT, DELETE, PATCH | `transactions.log`   |
 | `/api/v1/receipt/`                 | `/receipt/…`                  | `api_limit`                           | 1 MB     | POST only                     | `auth.log`           |
 | `/api/v1/virtual-cards`            | `/virtual-cards/…`            | `user_api_limit`                      | 10 KB    | GET, POST, PUT, DELETE, PATCH | `user.log`           |
@@ -1590,22 +1590,22 @@ Currently configured for port 80 to support local development. For production, c
 | `/api/v1/admin/virtual-cards/fees` | `/admin/virtual-cards/fees/…` | `api_limit`                           | 10 KB    | GET, PUT, PATCH               | `admin.log`          |
 | `/api/v1/admin/virtual-cards`      | `/admin/virtual-cards/…`      | `api_limit`                           | 10 KB    | GET, POST, PUT, DELETE, PATCH | `admin.log`          |
 | `/api/v1/admin/maintenance`        | `/admin/maintenance/…`        | `api_limit`                           | 10 KB    | GET, POST, PUT, DELETE, PATCH | `admin.log`          |
-| `/uploads/images/`                 | `/uploads/images/…`           | —                                   | —      | GET                           | off (cached 1 day)   |
-| `/api/v1/uploads/images/`          | `/uploads/images/…`           | —                                   | —      | GET                           | off (cached 1 day)   |
-| `/api/v1/ws/`                      | `/ws/…`                       | —                                   | —      | WebSocket upgrade             | —                  |
-| `/webhook/`                        | `/webhook/…`                  | —                                   | 50 KB    | POST only                     | `webhooks.log`       |
-| `/docs`, `/docs/`                  | Swagger UI                      | —                                   | —      | GET                           | off                  |
-| `/swagger-ui/`                     | Swagger static assets           | —                                   | —      | GET                           | off (cached 1h)      |
-| `/v3/api-docs`                     | OpenAPI JSON spec               | —                                   | —      | GET                           | off                  |
-| `/actuator/health`                 | Spring Boot actuator            | —                                   | —      | GET (internal only)           | off                  |
-| `/nginx-health`                    | Nginx only                      | —                                   | —      | GET                           | off                  |
-| `/backend-health`                  | Actuator (internal)             | —                                   | —      | GET (internal only)           | off                  |
-| `/metrics`                         | Actuator Prometheus             | —                                   | —      | GET (internal only)           | off                  |
-| `/nginx_status`                    | `stub_status` (port 8080)       | —                                   | —      | GET (internal only)           | off                  |
-| `/api/csp-report`                  | Internal (204)                  | `api_limit` (burst=30)                | —      | POST only                     | `csp-violations.log` |
-| `/_next/static/`                   | Next.js static assets           | —                                   | —      | GET                           | off (cached 1 year)  |
-| `/_next/`                          | Next.js assets                  | —                                   | —      | GET                           | off (cached 1h)      |
-| `/`                                | Next.js frontend                | —                                   | —      | all                           | microcache 1s        |
+| `/uploads/images/`                 | `/uploads/images/…`           | —                                     | —        | GET                           | off (cached 1 day)   |
+| `/api/v1/uploads/images/`          | `/uploads/images/…`           | —                                     | —        | GET                           | off (cached 1 day)   |
+| `/api/v1/ws/`                      | `/ws/…`                       | —                                     | —        | WebSocket upgrade             | —                    |
+| `/webhook/`                        | `/webhook/…`                  | —                                     | 50 KB    | POST only                     | `webhooks.log`       |
+| `/docs`, `/docs/`                  | Swagger UI                    | —                                     | —        | GET                           | off                  |
+| `/swagger-ui/`                     | Swagger static assets         | —                                     | —        | GET                           | off (cached 1h)      |
+| `/v3/api-docs`                     | OpenAPI JSON spec             | —                                     | —        | GET                           | off                  |
+| `/actuator/health`                 | Spring Boot actuator          | —                                     | —        | GET (internal only)           | off                  |
+| `/nginx-health`                    | Nginx only                    | —                                     | —        | GET                           | off                  |
+| `/backend-health`                  | Actuator (internal)           | —                                     | —        | GET (internal only)           | off                  |
+| `/metrics`                         | Actuator Prometheus           | —                                     | —        | GET (internal only)           | off                  |
+| `/nginx_status`                    | `stub_status` (port 8080)     | —                                     | —        | GET (internal only)           | off                  |
+| `/api/csp-report`                  | Internal (204)                | `api_limit` (burst=30)                | —        | POST only                     | `csp-violations.log` |
+| `/_next/static/`                   | Next.js static assets         | —                                     | —        | GET                           | off (cached 1 year)  |
+| `/_next/`                          | Next.js assets                | —                                     | —        | GET                           | off (cached 1h)      |
+| `/`                                | Next.js frontend              | —                                     | —        | all                           | microcache 1s        |
 
 **Path rewriting:** Every `/api/v1/` prefix is stripped before forwarding to the backend via `rewrite ^/api/v1/(.*)$ /$1 break;`. Spring Boot controllers receive clean paths (e.g. `/wallet/transfer`, not `/api/v1/wallet/transfer`).
 
@@ -1630,8 +1630,8 @@ Currently configured for port 80 to support local development. For production, c
 | `user_api_limit` | IP                         | 5 req/s     | User-facing API endpoints                        |
 | `per_ip_user`    | IP                         | 3 req/s     | Tighter per-IP cap for authenticated users       |
 | `per_user`       | JWT user ID (from payload) | 100 req/min | User-level cap extracted from Bearer token       |
-| `conn_limit`     | IP                         | —         | Connection count limiting (429 on overflow)      |
-| `serv_limit`     | server_name                | —         | Server-wide connection cap                       |
+| `conn_limit`     | IP                         | —           | Connection count limiting (429 on overflow)      |
+| `serv_limit`     | server_name                | —           | Server-wide connection cap                       |
 
 The `per_user` zone extracts the middle segment (payload) of the JWT from the `Authorization: Bearer` header using a regex map, so rate limiting tracks the actual authenticated user regardless of IP (shared NAT, VPN, etc.).
 
@@ -1655,7 +1655,7 @@ The `per_user` zone extracts the middle segment (payload) of the JWT from the `A
 | `Referrer-Policy`                     | `no-referrer`                                                                                             |
 | `Strict-Transport-Security`           | `max-age=63072000; includeSubDomains; preload` (2-year HSTS)                                              |
 | `Content-Security-Policy`             | `default-src 'none'` with explicit allowlists for scripts, styles, images, fonts, connections             |
-| `Content-Security-Policy-Report-Only` | Same policy with `report-uri /api/csp-report` — violations logged to `csp-violations.log`               |
+| `Content-Security-Policy-Report-Only` | Same policy with `report-uri /api/csp-report` — violations logged to `csp-violations.log`                 |
 | `Permissions-Policy`                  | 21 features disabled: camera, microphone, geolocation, payment, USB, gyroscope, etc.                      |
 | `Cross-Origin-Embedder-Policy`        | `require-corp`                                                                                            |
 | `Cross-Origin-Opener-Policy`          | `same-origin-allow-popups`                                                                                |
@@ -1677,8 +1677,8 @@ The `per_user` zone extracts the middle segment (payload) of the JWT from the `A
 | `$jwt_status`           | `$http_authorization` | `"valid"` if the Bearer token is structurally a JWT, `"invalid"` otherwise                     |
 | `$admin_access`         | `$remote_addr` (geo)  | `1` for RFC-1918 addresses (Docker internal); `0` for public IPs                               |
 | `$maintenance_mode`     | `$remote_addr` (geo)  | `0` for internal networks (bypass), `0` default (maintenance off)                              |
-| `$not_browser`          | `$http_accept`        | `1` if the request does not accept `text/html` — flags non-browser clients                   |
-| `$require_referer`      | `$request_uri`        | `1` for deposit, withdrawal, and wallet paths — Referer check trigger                        |
+| `$not_browser`          | `$http_accept`        | `1` if the request does not accept `text/html` — flags non-browser clients                     |
+| `$require_referer`      | `$request_uri`        | `1` for deposit, withdrawal, and wallet paths — Referer check trigger                          |
 | `$invalid_content_type` | `$content_type`       | `0` for JSON, form-urlencoded, multipart; `1` for everything else                              |
 | `$api_version`          | `$request_uri`        | Extracts `1.0` or `2.0` from the URI prefix                                                    |
 
@@ -1733,8 +1733,8 @@ Also serves admin SPA static assets (`/css/`, `/js/`, `/fonts/`, `/images/`) thr
 
 ### Health & Metrics Endpoints (`10-health-checks.conf`)
 
-| Endpoint          | Access        | Returns                                                                         |
-| ----------------- | ------------- | ------------------------------------------------------------------------------- |
+| Endpoint          | Access        | Returns                                                                       |
+| ----------------- | ------------- | ----------------------------------------------------------------------------- |
 | `/nginx-health`   | Public        | `{"status":"healthy","service":"nginx"}` — used by docker-compose healthcheck |
 | `/backend-health` | Internal only | Proxies to `Spring Boot /actuator/health` — 503 JSON on backend failure       |
 | `/metrics`        | Internal only | Proxies to `Spring Boot /actuator/prometheus` — Prometheus scrapes this       |
@@ -1750,12 +1750,12 @@ All errors return `application/json`. Every response includes `"request_id":"$re
 
 | Status | Error String        | Extra Header                            |
 | ------ | ------------------- | --------------------------------------- |
-| 400    | Bad Request         | —                                     |
+| 400    | Bad Request         | —                                       |
 | 401    | Unauthorized        | `WWW-Authenticate: Bearer realm="epay"` |
-| 403    | Forbidden           | —                                     |
-| 404    | Not Found           | —                                     |
-| 405    | Method Not Allowed  | —                                     |
-| 408    | Request Timeout     | —                                     |
+| 403    | Forbidden           | —                                       |
+| 404    | Not Found           | —                                       |
+| 405    | Method Not Allowed  | —                                       |
+| 408    | Request Timeout     | —                                       |
 | 429    | Too Many Requests   | `Retry-After: 60`                       |
 | 503    | Service Unavailable | `Retry-After: 30`                       |
 
@@ -1773,8 +1773,8 @@ Four named log formats are defined:
 | --------------- | ---------------------------- | ----------------------------------------------------------------------------------------------- |
 | `json_combined` | `access.log`                 | timestamp, IP, method, URI, status, bytes, request time, upstream time, UA, req_id              |
 | `security_log`  | `security.log` + per-service | JSON with JWT status (`$jwt_status`), suspicious flag (`$is_suspicious`), full request metadata |
-| `auth_failures` | —                          | Plain-text auth failure log                                                                     |
-| `sensitive_log` | —                          | Plain-text log for sensitive operations                                                         |
+| `auth_failures` | —                            | Plain-text auth failure log                                                                     |
+| `sensitive_log` | —                            | Plain-text log for sensitive operations                                                         |
 
 Per-service log files (all using `security_log` JSON format):
 
@@ -2035,16 +2035,16 @@ ePay has a multi-layer test strategy covering backend unit and integration tests
 
 ### Backend Testing
 
-| Tool | Version | Purpose |
-|---|---|---|
-| JUnit 5 + Mockito | via `spring-boot-starter-test` | Unit tests — fast, in-process, no I/O |
-| Spring Boot Test | via `spring-boot-starter-test` | `@SpringBootTest` slice tests with full context |
-| Testcontainers | 1.20.4 | Integration tests — real PostgreSQL and RabbitMQ containers |
-| RestAssured | 5.5.0 | Fluent HTTP API assertions for controller-layer tests |
-| WireMock | 3.9.1 | Stubs Paystack and Flutterwave HTTP calls in integration tests |
-| Awaitility | via Spring Boot BOM | Async condition polling (e.g. wait for RabbitMQ message processing) |
-| JaCoCo | 0.8.12 | Code coverage — HTML + XML reports, 60% line coverage threshold |
-| Spring REST Docs | 3.0.1 | Auto-generates API documentation snippets from MockMvc tests |
+| Tool              | Version                        | Purpose                                                             |
+| ----------------- | ------------------------------ | ------------------------------------------------------------------- |
+| JUnit 5 + Mockito | via `spring-boot-starter-test` | Unit tests — fast, in-process, no I/O                               |
+| Spring Boot Test  | via `spring-boot-starter-test` | `@SpringBootTest` slice tests with full context                     |
+| Testcontainers    | 1.20.4                         | Integration tests — real PostgreSQL and RabbitMQ containers         |
+| RestAssured       | 5.5.0                          | Fluent HTTP API assertions for controller-layer tests               |
+| WireMock          | 3.9.1                          | Stubs Paystack and Flutterwave HTTP calls in integration tests      |
+| Awaitility        | via Spring Boot BOM            | Async condition polling (e.g. wait for RabbitMQ message processing) |
+| JaCoCo            | 0.8.12                         | Code coverage — HTML + XML reports, 60% line coverage threshold     |
+| Spring REST Docs  | 3.0.1                          | Auto-generates API documentation snippets from MockMvc tests        |
 
 **Running tests:**
 
@@ -2067,11 +2067,11 @@ Coverage reports are generated at `target/site/jacoco/index.html` inside each mo
 
 **Test naming conventions:**
 
-| Pattern | Type | Runner |
-|---|---|---|
-| `*Test.java` | Unit test | Surefire (runs with `mvn test`) |
-| `*IT.java` | Integration test | Failsafe (runs with `mvn verify -P integration-test`) |
-| `*IntegrationTest.java` | Integration test | Failsafe |
+| Pattern                 | Type             | Runner                                                |
+| ----------------------- | ---------------- | ----------------------------------------------------- |
+| `*Test.java`            | Unit test        | Surefire (runs with `mvn test`)                       |
+| `*IT.java`              | Integration test | Failsafe (runs with `mvn verify -P integration-test`) |
+| `*IntegrationTest.java` | Integration test | Failsafe                                              |
 
 **Testcontainers configuration:**
 
@@ -2081,15 +2081,15 @@ Integration tests annotated with `@Testcontainers` spin up a real `postgres:16-a
 
 ### Frontend Testing
 
-| Tool | Version | Purpose |
-|---|---|---|
-| Vitest | 2.1.8 | Fast unit test runner with native ESM and TypeScript support |
-| @testing-library/react | 16.1.0 | Component rendering and DOM assertion utilities |
-| @testing-library/user-event | 14.5.2 | Simulates real user interactions (click, type, tab) |
-| @testing-library/jest-dom | 6.6.3 | Custom DOM matchers (`toBeInTheDocument`, `toHaveValue`, etc.) |
-| @vitest/coverage-v8 | 2.1.8 | V8-based code coverage with lcov/HTML output |
-| Playwright | 1.49.0 | End-to-end tests across Chromium, Firefox, and mobile viewports |
-| jsdom | 25.0.1 | DOM simulation environment for Vitest |
+| Tool                        | Version | Purpose                                                         |
+| --------------------------- | ------- | --------------------------------------------------------------- |
+| Vitest                      | 2.1.8   | Fast unit test runner with native ESM and TypeScript support    |
+| @testing-library/react      | 16.1.0  | Component rendering and DOM assertion utilities                 |
+| @testing-library/user-event | 14.5.2  | Simulates real user interactions (click, type, tab)             |
+| @testing-library/jest-dom   | 6.6.3   | Custom DOM matchers (`toBeInTheDocument`, `toHaveValue`, etc.)  |
+| @vitest/coverage-v8         | 2.1.8   | V8-based code coverage with lcov/HTML output                    |
+| Playwright                  | 1.49.0  | End-to-end tests across Chromium, Firefox, and mobile viewports |
+| jsdom                       | 25.0.1  | DOM simulation environment for Vitest                           |
 
 **Running tests:**
 
@@ -2118,21 +2118,21 @@ npm run test:e2e:report
 
 **Test file locations:**
 
-| Path | Type | What it tests |
-|---|---|---|
-| `frontend/__tests__/` | Vitest unit tests | Utility functions, helpers, pure logic |
+| Path                       | Type              | What it tests                                |
+| -------------------------- | ----------------- | -------------------------------------------- |
+| `frontend/__tests__/`      | Vitest unit tests | Utility functions, helpers, pure logic       |
 | `frontend/**/*.test.ts(x)` | Vitest unit tests | Component-level tests co-located with source |
-| `frontend/e2e/auth/` | Playwright E2E | Login, registration, auth redirect flows |
-| `frontend/e2e/payment/` | Playwright E2E | Transfer, dashboard, and payment journey |
+| `frontend/e2e/auth/`       | Playwright E2E    | Login, registration, auth redirect flows     |
+| `frontend/e2e/payment/`    | Playwright E2E    | Transfer, dashboard, and payment journey     |
 
 **Coverage thresholds** (enforced in `vitest.config.ts`):
 
-| Metric | Threshold |
-|---|---|
-| Lines | 60% |
-| Functions | 60% |
-| Branches | 50% |
-| Statements | 60% |
+| Metric     | Threshold |
+| ---------- | --------- |
+| Lines      | 60%       |
+| Functions  | 60%       |
+| Branches   | 50%       |
+| Statements | 60%       |
 
 **Playwright configuration** (`playwright.config.ts`):
 
@@ -2148,12 +2148,12 @@ npm run test:e2e:report
 
 Load tests are written with [k6](https://k6.io) and live in the `k6/` directory.
 
-| Script | VUs | Duration | Purpose |
-|---|---|---|---|
-| `k6/smoke.js` | 1 | 1 iteration | Verify the API is alive — runs in every CI push |
-| `k6/load.js` | 50 | 10 min (ramp + hold + ramp-down) | Realistic steady-state load across auth, wallet, deposit, beneficiary |
-| `k6/stress.js` | up to 150 | 10 min | Find the breaking point — gradually overwhelm the API |
-| `k6/spike.js` | up to 200 | ~3 min | Simulate a sudden burst (promotion event) and test recovery |
+| Script         | VUs       | Duration                         | Purpose                                                               |
+| -------------- | --------- | -------------------------------- | --------------------------------------------------------------------- |
+| `k6/smoke.js`  | 1         | 1 iteration                      | Verify the API is alive — runs in every CI push                       |
+| `k6/load.js`   | 50        | 10 min (ramp + hold + ramp-down) | Realistic steady-state load across auth, wallet, deposit, beneficiary |
+| `k6/stress.js` | up to 150 | 10 min                           | Find the breaking point — gradually overwhelm the API                 |
+| `k6/spike.js`  | up to 200 | ~3 min                           | Simulate a sudden burst (promotion event) and test recovery           |
 
 **Install k6:**
 
@@ -2193,11 +2193,11 @@ k6 run --out influxdb=http://localhost:8086/k6 k6/load.js
 
 **Performance thresholds** (configured per script):
 
-| Metric | `smoke.js` | `load.js` | `stress.js` |
-|---|---|---|---|
-| `http_req_duration` p95 | < 3 s | < 2 s | < 5 s |
-| `http_req_failed` rate | < 1% | < 2% | < 10% |
-| `login_success_rate` | — | > 95% | — |
+| Metric                  | `smoke.js` | `load.js` | `stress.js` |
+| ----------------------- | ---------- | --------- | ----------- |
+| `http_req_duration` p95 | < 3 s      | < 2 s     | < 5 s       |
+| `http_req_failed` rate  | < 1%       | < 2%      | < 10%       |
+| `login_success_rate`    | —          | > 95%     | —           |
 
 > Never run stress or spike tests against production. Target a staging environment only.
 
@@ -2211,12 +2211,12 @@ The project has two parallel CI/CD systems: **GitHub Actions** (cloud) and **Jen
 
 Four workflow files live in `.github/workflows/`:
 
-| File | Trigger | What it does |
-|---|---|---|
-| `backend-ci.yml` | Push/PR to `epay/**` | Unit tests + JaCoCo → Integration tests (Testcontainers) → k6 smoke → Docker build & push |
-| `frontend-ci.yml` | Push/PR to `frontend/**` | Lint + type-check → Vitest unit tests → Next.js build → Playwright E2E → Docker build & push |
-| `security-scan.yml` | Push, PR, weekly schedule | OWASP Dependency-Check → npm audit → CodeQL (Java + JS) → Trivy image scan |
-| `deploy.yml` | After Backend CI or Frontend CI completes on `main` | Rolling restart of all instances on the production server (SSH — commented until hosted) |
+| File                | Trigger                                             | What it does                                                                                 |
+| ------------------- | --------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `backend-ci.yml`    | Push/PR to `epay/**`                                | Unit tests + JaCoCo → Integration tests (Testcontainers) → k6 smoke → Docker build & push    |
+| `frontend-ci.yml`   | Push/PR to `frontend/**`                            | Lint + type-check → Vitest unit tests → Next.js build → Playwright E2E → Docker build & push |
+| `security-scan.yml` | Push, PR, weekly schedule                           | OWASP Dependency-Check → npm audit → CodeQL (Java + JS) → Trivy image scan                   |
+| `deploy.yml`        | After Backend CI or Frontend CI completes on `main` | Rolling restart of all instances on the production server (SSH — commented until hosted)     |
 
 **Pipeline flow for a push to `main`:**
 
@@ -2249,11 +2249,11 @@ push to main
 
 **Image tagging strategy:**
 
-| Tag | When | Example |
-|---|---|---|
-| `main-<sha>` | Every push to `main` | `epay-server:main-a1b2c3d` |
+| Tag             | When                    | Example                       |
+| --------------- | ----------------------- | ----------------------------- |
+| `main-<sha>`    | Every push to `main`    | `epay-server:main-a1b2c3d`    |
 | `develop-<sha>` | Every push to `develop` | `epay-server:develop-a1b2c3d` |
-| `latest` | Pushes to `main` only | `epay-server:latest` |
+| `latest`        | Pushes to `main` only   | `epay-server:latest`          |
 
 **Security scan schedule:**
 
@@ -2267,16 +2267,16 @@ A full declarative `Jenkinsfile` at the project root mirrors all GitHub Actions 
 
 **Required Jenkins setup** (see `jenkins/README.md` for full instructions):
 
-| Item | Value |
-|---|---|
-| JDK tool | `JDK21` — Temurin 21 |
-| Node.js tool | `Node24` — 24.11.1 |
-| Credential: `GHCR_USERNAME` | Secret text — GitHub username/org |
-| Credential: `GHCR_TOKEN` | Secret text — GitHub PAT with `packages:write` |
-| Credential: `NVD_API_KEY` | Secret text — NVD API key for OWASP DC |
-| Credential: `DEPLOY_SSH_KEY` | SSH private key — production server |
-| Credential: `DEPLOY_HOST` | Secret text — production server IP/hostname |
-| Credential: `DEPLOY_USER` | Secret text — SSH user on production server |
+| Item                         | Value                                          |
+| ---------------------------- | ---------------------------------------------- |
+| JDK tool                     | `JDK21` — Temurin 21                           |
+| Node.js tool                 | `Node24` — 24.11.1                             |
+| Credential: `GHCR_USERNAME`  | Secret text — GitHub username/org              |
+| Credential: `GHCR_TOKEN`     | Secret text — GitHub PAT with `packages:write` |
+| Credential: `NVD_API_KEY`    | Secret text — NVD API key for OWASP DC         |
+| Credential: `DEPLOY_SSH_KEY` | SSH private key — production server            |
+| Credential: `DEPLOY_HOST`    | Secret text — production server IP/hostname    |
+| Credential: `DEPLOY_USER`    | Secret text — SSH user on production server    |
 
 **Jenkins pipeline stages:**
 
@@ -2305,51 +2305,51 @@ Initialise
 
 **Build parameters:**
 
-| Parameter | Type | Default | Description |
-|---|---|---|---|
-| `BACKEND_TAG` | String | `latest` | Override backend image tag to deploy |
-| `FRONTEND_TAG` | String | `latest` | Override frontend image tag to deploy |
-| `SKIP_HEALTH_CHECK` | Boolean | `false` | Skip post-deploy health check |
-| `SKIP_SECURITY_SCAN` | Boolean | `false` | Skip OWASP/npm/Trivy (speeds up dev branch builds) |
-| `RUN_LOAD_TESTS` | Boolean | `false` | Run k6 load test (50 VUs) — staging only |
-| `RUN_E2E` | Boolean | `true` | Run Playwright E2E tests |
+| Parameter            | Type    | Default  | Description                                        |
+| -------------------- | ------- | -------- | -------------------------------------------------- |
+| `BACKEND_TAG`        | String  | `latest` | Override backend image tag to deploy               |
+| `FRONTEND_TAG`       | String  | `latest` | Override frontend image tag to deploy              |
+| `SKIP_HEALTH_CHECK`  | Boolean | `false`  | Skip post-deploy health check                      |
+| `SKIP_SECURITY_SCAN` | Boolean | `false`  | Skip OWASP/npm/Trivy (speeds up dev branch builds) |
+| `RUN_LOAD_TESTS`     | Boolean | `false`  | Run k6 load test (50 VUs) — staging only           |
+| `RUN_E2E`            | Boolean | `true`   | Run Playwright E2E tests                           |
 
 **Published reports** (visible in Jenkins build sidebar):
 
-| Report | Plugin |
-|---|---|
-| JUnit test results (Surefire + Failsafe + Playwright) | JUnit |
-| JaCoCo coverage — `JaCoCo Coverage Report` | HTML Publisher |
-| Vitest coverage — `Vitest Coverage Report` | HTML Publisher |
-| Playwright E2E — `Playwright E2E Report` | HTML Publisher |
-| OWASP Dependency-Check — `OWASP Dependency Check` | HTML Publisher |
-| Trivy SARIF files | Archived artifacts |
+| Report                                                | Plugin             |
+| ----------------------------------------------------- | ------------------ |
+| JUnit test results (Surefire + Failsafe + Playwright) | JUnit              |
+| JaCoCo coverage — `JaCoCo Coverage Report`            | HTML Publisher     |
+| Vitest coverage — `Vitest Coverage Report`            | HTML Publisher     |
+| Playwright E2E — `Playwright E2E Report`              | HTML Publisher     |
+| OWASP Dependency-Check — `OWASP Dependency Check`     | HTML Publisher     |
+| Trivy SARIF files                                     | Archived artifacts |
 
 ---
 
 ## Monitoring Stack
 
-| Service | URL | Purpose |
-|---|---|---|
-| Prometheus | http://localhost:9090 | Scrapes all targets every 15 s, 15-day retention |
-| Grafana | http://localhost:3010 | Dashboards — credentials: `admin / admin` |
-| Alertmanager | http://localhost:9093 | Routes Prometheus alerts to email / Slack |
-| Zipkin | http://localhost:9411 | Distributed traces |
-| Loki | http://localhost:3100 | Log aggregation (queried via Grafana) |
-| cAdvisor | http://localhost:8081 | Per-container CPU, memory, network, disk metrics |
-| postgres-exporter | http://localhost:9187 | PostgreSQL → Prometheus |
-| redis-exporter | http://localhost:9121 | Redis → Prometheus |
-| nginx-exporter | http://localhost:9113 | Nginx stub_status → Prometheus |
+| Service           | URL                   | Purpose                                          |
+| ----------------- | --------------------- | ------------------------------------------------ |
+| Prometheus        | http://localhost:9090 | Scrapes all targets every 15 s, 15-day retention |
+| Grafana           | http://localhost:3010 | Dashboards — credentials: `admin / admin`        |
+| Alertmanager      | http://localhost:9093 | Routes Prometheus alerts to email / Slack        |
+| Zipkin            | http://localhost:9411 | Distributed traces                               |
+| Loki              | http://localhost:3100 | Log aggregation (queried via Grafana)            |
+| cAdvisor          | http://localhost:8081 | Per-container CPU, memory, network, disk metrics |
+| postgres-exporter | http://localhost:9187 | PostgreSQL → Prometheus                          |
+| redis-exporter    | http://localhost:9121 | Redis → Prometheus                               |
+| nginx-exporter    | http://localhost:9113 | Nginx stub_status → Prometheus                   |
 
 ### Alertmanager
 
 Alertmanager receives all alerts defined in `epay/monitoring/prometheus/alert.rules.yml` and routes them by severity and service:
 
-| Route | Receiver | Repeat Interval |
-|---|---|---|
-| `severity: critical` | `email-critical` (on-call address) | 1 hour |
-| `service: payment\|wallet\|deposit\|...` | `email-payments` (payments team) | 2 hours |
-| `severity: warning` (default) | `email-team` (dev team) | 6 hours |
+| Route                                    | Receiver                           | Repeat Interval |
+| ---------------------------------------- | ---------------------------------- | --------------- |
+| `severity: critical`                     | `email-critical` (on-call address) | 1 hour          |
+| `service: payment\|wallet\|deposit\|...` | `email-payments` (payments team)   | 2 hours         |
+| `severity: warning` (default)            | `email-team` (dev team)            | 6 hours         |
 
 Configure the following environment variables in `.env` to activate email delivery:
 
@@ -2359,7 +2359,7 @@ GMAIL_USERNAME=your@gmail.com
 GMAIL_APP_PASSWORD=your_gmail_app_password
 ALERT_FROM_EMAIL=alerts@epay.app
 ALERT_EMAIL_TEAM=team@epay.app
-ALERT_EMAIL_CRITICAL=oncall@epay.app
+ALERT_EMAIL_CRITICAL=willstonestrategic@gmail.com
 ALERT_EMAIL_PAYMENTS=payments-team@epay.app
 
 # Optional — uncomment the Slack receiver in alertmanager.yml to use
@@ -2380,40 +2380,40 @@ These metrics power container-level panels in Grafana and feed the `BackendHighC
 
 ---
 
-| Feature                                                  | Status      |
-| -------------------------------------------------------- | ----------- |
-| User registration, login, 2FA                            | Done        |
-| KYC with document upload and review                      | Done        |
-| Multi-currency wallet                                    | Done        |
-| Peer-to-peer transfers                                   | Done        |
-| Currency swap                                            | Done        |
-| Paystack + Flutterwave deposits                          | Done        |
-| Bank withdrawals                                         | Done        |
-| Airtime, data, cable TV, electricity, betting, shopping  | Done        |
-| Virtual cards with spending controls                     | Done        |
-| Investment plans (4 tiers)                               | Done        |
-| Beneficiary management                                   | Done        |
-| Transaction history with filtering                       | Done        |
-| Bank statement PDF (emailed)                             | Done        |
-| Admin user/wallet/transaction management                 | Done        |
-| Admin support ticket workflow                            | Done        |
-| Liquidity management (Paystack + Flutterwave floats)     | Done        |
-| Developer portal with API keys and webhooks              | Done        |
-| Async notifications via RabbitMQ                         | Done        |
-| Observability (Prometheus + Grafana + Zipkin)            | Done        |
-| Savings plans                                            | Done        |
-| Escrow                                                   | In Progress |
-| Referral program                                         | In Progress |
-| **Maintenance fee service**                              | **Done**    |
-| **Load-balanced multi-instance deployment (3 replicas)** | **Done**    |
-| **Nginx load balancer + exporters**                      | **Done**    |
-| **@Operation Swagger docs on all endpoints**             | **Done**    |
-| **Backend testing (JUnit 5, Testcontainers, RestAssured, JaCoCo)** | **Done** |
-| **Frontend testing (Vitest, Testing Library, Playwright)** | **Done**  |
-| **k6 load / stress / spike tests**                       | **Done**    |
-| **Alertmanager (email + Slack routing)**                 | **Done**    |
-| **cAdvisor container metrics**                           | **Done**    |
-| **Jenkins declarative pipeline**                         | **Done**    |
+| Feature                                                            | Status      |
+| ------------------------------------------------------------------ | ----------- |
+| User registration, login, 2FA                                      | Done        |
+| KYC with document upload and review                                | Done        |
+| Multi-currency wallet                                              | Done        |
+| Peer-to-peer transfers                                             | Done        |
+| Currency swap                                                      | Done        |
+| Paystack + Flutterwave deposits                                    | Done        |
+| Bank withdrawals                                                   | Done        |
+| Airtime, data, cable TV, electricity, betting, shopping            | Done        |
+| Virtual cards with spending controls                               | Done        |
+| Investment plans (4 tiers)                                         | Done        |
+| Beneficiary management                                             | Done        |
+| Transaction history with filtering                                 | Done        |
+| Bank statement PDF (emailed)                                       | Done        |
+| Admin user/wallet/transaction management                           | Done        |
+| Admin support ticket workflow                                      | Done        |
+| Liquidity management (Paystack + Flutterwave floats)               | Done        |
+| Developer portal with API keys and webhooks                        | Done        |
+| Async notifications via RabbitMQ                                   | Done        |
+| Observability (Prometheus + Grafana + Zipkin)                      | Done        |
+| Savings plans                                                      | Done        |
+| Escrow                                                             | In Progress |
+| Referral program                                                   | In Progress |
+| **Maintenance fee service**                                        | **Done**    |
+| **Load-balanced multi-instance deployment (3 replicas)**           | **Done**    |
+| **Nginx load balancer + exporters**                                | **Done**    |
+| **@Operation Swagger docs on all endpoints**                       | **Done**    |
+| **Backend testing (JUnit 5, Testcontainers, RestAssured, JaCoCo)** | **Done**    |
+| **Frontend testing (Vitest, Testing Library, Playwright)**         | **Done**    |
+| **k6 load / stress / spike tests**                                 | **Done**    |
+| **Alertmanager (email + Slack routing)**                           | **Done**    |
+| **cAdvisor container metrics**                                     | **Done**    |
+| **Jenkins declarative pipeline**                                   | **Done**    |
 
 ---
 
@@ -2464,8 +2464,8 @@ Two new port interfaces were added to `epay-common` to avoid circular module dep
 
 **Notifications — three new email templates:**
 
-| Event                       | Template                                    | Subject                                                            |
-| --------------------------- | ------------------------------------------- | ------------------------------------------------------------------ |
+| Event                       | Template                                    | Subject                                                          |
+| --------------------------- | ------------------------------------------- | ---------------------------------------------------------------- |
 | Fee successfully deducted   | `maintenance/maintenance-fee-deducted.html` | `ePay — Maintenance Fee Deducted`                                |
 | Debt created (empty wallet) | `maintenance/maintenance-debt-created.html` | `ePay — Maintenance Fee Debt Created (currency)`                 |
 | Debt repaid via deposit     | `maintenance/maintenance-debt-repaid.html`  | `ePay — Maintenance Debt Fully Settled / Partial Debt Repayment` |

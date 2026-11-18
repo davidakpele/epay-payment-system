@@ -147,6 +147,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
     }
 
+    private boolean isRefreshEndpoint(HttpServletRequest request) {
+        String path = request.getRequestURI();
+        return "POST".equalsIgnoreCase(request.getMethod())
+                && (path.equals("/auth/refresh") || path.endsWith("/auth/refresh"));
+    }
+
     private boolean isPublicEndpoint(HttpServletRequest request) {
         String path   = request.getRequestURI();
         String method = request.getMethod();
@@ -171,11 +177,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                (path.equals("/support/chat")         && method.equals("POST")) ||
                (path.startsWith("/support/articles")  && method.equals("GET"))  ||
                (path.equals("/support/faqs")          && method.equals("GET"));
-    }
-
-    private boolean isRefreshEndpoint(HttpServletRequest request) {
-        String path = request.getRequestURI();
-        return path.equals("/auth/refresh") || path.equals("/auth/token/refresh");
     }
 
     private void writeError(HttpServletResponse response, int status,

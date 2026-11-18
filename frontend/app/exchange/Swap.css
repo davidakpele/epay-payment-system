@@ -68,7 +68,7 @@
 
 /* ── Illustration Column ── */
 .swap-illustration-col {
-  background: linear-gradient(145deg, #f0faf2 0%, #e2f0e5 100%);
+  background: linear-gradient(145deg, #0f172a00 0%, #e2e8f0 100% 100% );
   display: flex;
   align-items: center;
   justify-content: center;
