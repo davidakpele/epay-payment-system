@@ -11,13 +11,15 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import "./BeneficiaryManager.css";
 
+
 interface Transaction {
   id: string | number;
   date: string;
-  amount: string;
+  amount: number;
   type: string;
-  status: string;
   description?: string;
+  direction: "CREDIT" | "DEBIT";
+  status: string;
   reference?: string;
   currencyType?: string;
 }
@@ -199,60 +201,116 @@ const BeneficiaryManager = () => {
     });
   }, [activeFilter, searchQuery, beneficiaries]);
 
-  const openHistoryModal = async (beneficiary: Beneficiary) => {
-    try {
-      setSelectedBeneficiary({ ...beneficiary, transactions: [] });
-      setShowHistoryModal(true);
-      setIsLoadingTransactions(true);
-      const minimumDelay = new Promise((resolve) => setTimeout(resolve, 1000));
-      const userId = getUserId();
-      const fetchData = historyService.getHistoryByBeneficiaryId(userId);
-      const [_, response] = await Promise.all([minimumDelay, fetchData]);
+    const mapHistoryItem = (t: any, fallbackCurrency: string): Transaction => ({
+      id: t.transactionId ?? t.historyId ?? t.reference ?? "",
+      date: t.timestamps?.completedAt ?? t.timestamps?.createdAt ?? "",
+      amount: Number(t.amount?.net ?? t.amount?.gross ?? 0),
+      type: t.transactionType ?? "TRANSFER",
+      direction: t.debitCredit === "CREDIT" ? "CREDIT" : "DEBIT",
+      status: mapTransactionStatus(
+        t.status ?? t.stateMachine?.currentState ?? "",
+      ),
+      description: t.description ?? "",
+      reference: t.reference ?? t.transactionId ?? "",
+      currencyType: t.amount?.currency ?? fallbackCurrency,
+    });
 
-      // Backend returns paginated shape: { success, data: { content: [...] } }
-      const allItems: any[] = Array.isArray(response)
-        ? response
-        : (response?.data?.content ?? response?.content ?? []);
+      const extractHistoryItems = (response: any): any[] => {
+        const candidates = [
+          response,
+          response?.content,
+          response?.data,
+          response?.data?.content,
+          response?.data?.data,
+          response?.data?.data?.content,
+        ];
+        return candidates.find((c) => Array.isArray(c)) ?? [];
+      };
 
-      // Filter to only transactions involving this beneficiary
-      const beneficiaryName = beneficiary.beneficiaryName.toUpperCase();
-      const filtered = allItems.filter((t: any) => {
-        const recipientHolder = (
-          t.recipient?.accountHolder || ""
-        ).toUpperCase();
-        const description = (t.description || "").toUpperCase();
-        return (
-          recipientHolder === beneficiaryName ||
-          description.includes(beneficiaryName)
-        );
-      });
+      const normalizeName = (value?: string | null) =>
+        (value ?? "").replace(/\s+/g, " ").trim().toUpperCase();
 
-      const transactions: Transaction[] = filtered.map((t: any) => ({
-        id: t.transactionId || t.id || "",
-        date: t.completedAt || t.createdAt || t.timestamp || t.createdOn || "",
-        amount: t.amount?.net ?? t.amount?.gross ?? t.amount ?? "0",
-        type: t.transactionType || t.type || "TRANSFER",
-        status: mapTransactionStatus(t.currentStatus || t.status || ""),
-        description: t.description || t.message || "",
-        reference: t.reference || t.referenceNo || t.transactionId || "",
-        currencyType:
-          t.amount?.currency || t.currencyType || beneficiary.currency,
-      }));
+       const openHistoryModal = async (beneficiary: Beneficiary) => {
+         try {
+           setSelectedBeneficiary({ ...beneficiary, transactions: [] });
+           setShowHistoryModal(true);
+           setIsLoadingTransactions(true);
 
-      setSelectedBeneficiary({ ...beneficiary, transactions });
-    } catch (err: any) {
-      setError(err.message || "Failed to load transaction history");
-      setSelectedBeneficiary({ ...beneficiary, transactions: [] });
-    } finally {
-      setIsLoadingTransactions(false);
-    }
-  };
+           const minimumDelay = new Promise((resolve) =>
+             setTimeout(resolve, 1000),
+           );
+           const userId = getUserId();
+           const fetchData = historyService.getHistoryByBeneficiaryId(userId);
+           const [, response] = await Promise.all([minimumDelay, fetchData]);
+
+           const allItems: any[] = response?.data?.content ?? [];
+
+           const normalize = (value?: string | null) =>
+             (value ?? "").replace(/\s+/g, " ").trim().toUpperCase();
+
+           const targets = [
+             beneficiary.beneficiaryName,
+             beneficiary.accountName,
+             beneficiary.recipientUsername,
+           ]
+             .map(normalize)
+             .filter(Boolean);
+           const DEBUG_SHOW_ALL = true;
+           
+           const transactions = allItems
+             .filter((t: any) => {
+               if (DEBUG_SHOW_ALL) return true;
+               const holder = normalize(t.recipient?.accountHolder);
+               const description = normalize(t.description);
+               return targets.some(
+                 (name) =>
+                   (holder !== "" &&
+                     (holder === name ||
+                       holder.includes(name) ||
+                       name.includes(holder))) ||
+                   description.includes(name),
+               );
+             })
+             .map((t: any) => mapHistoryItem(t, beneficiary.currency))
+             .sort(
+               (a, b) =>
+                 new Date(b.date).getTime() - new Date(a.date).getTime(),
+             );
+
+           console.log("[history] items from api:", allItems.length);
+           console.log("[history] match targets:", targets);
+           console.log(
+             "[history] holders in api:",
+             allItems.map((t: any) => t.recipient?.accountHolder),
+           );
+           console.log("[history] matched:", transactions.length);
+
+           setSelectedBeneficiary({ ...beneficiary, transactions });
+         } catch (err: any) {
+           console.error("[history] failed:", err);
+           setError(err.message || "Failed to load transaction history");
+           setSelectedBeneficiary({ ...beneficiary, transactions: [] });
+         } finally {
+           setIsLoadingTransactions(false);
+         }
+       };
 
   const mapTransactionStatus = (status: string): string => {
     const s = status?.toLowerCase() || "";
-    if (["success", "completed", "confirmed", "delivered"].includes(s))
+    if (
+      ["success", "completed", "confirmed", "delivered", "settled"].includes(s)
+    )
       return "completed";
-    if (["pending", "processing", "initiated", "processed"].includes(s))
+    if (
+      [
+        "pending",
+        "processing",
+        "initiated",
+        "processed",
+        "authorized",
+        "settlement_pending",
+      ].includes(s)
+    )
       return "pending";
     if (["failed", "rejected", "cancelled"].includes(s)) return "failed";
     return "pending";
@@ -429,6 +487,7 @@ const BeneficiaryManager = () => {
       setIsCreatingBeneficiary(false);
     }
   };
+  
 
   const transferToBeneficiary = (beneficiary: Beneficiary) => {
     router.push(`/beneficiary-transfer?beneficiaryId=${beneficiary.id}`);
@@ -1127,7 +1186,7 @@ const BeneficiaryManager = () => {
                     ) : (
                       <div className="space-y-2 p-4">
                         {selectedBeneficiary.transactions.map((transaction) => {
-                          const credit = isCredit(transaction.type);
+                          const credit = transaction.direction === "CREDIT";
                           return (
                             <div
                               key={transaction.id}
@@ -1148,7 +1207,7 @@ const BeneficiaryManager = () => {
                                   </div>
                                   <div>
                                     <h5 className="font-bold text-gray-900 text-sm">
-                                      {transaction.type}
+                                      {transaction.type.replace(/_/g, " ")}
                                     </h5>
                                     <p className="text-xs text-gray-500 mt-0.5">
                                       {new Date(
@@ -1177,12 +1236,13 @@ const BeneficiaryManager = () => {
                                           : transaction.currencyType === "GBP"
                                             ? "£"
                                             : ""}
-                                    {parseFloat(
-                                      transaction.amount,
-                                    ).toLocaleString("en-US", {
-                                      minimumFractionDigits: 2,
-                                      maximumFractionDigits: 2,
-                                    })}
+                                    {transaction.amount.toLocaleString(
+                                      "en-US",
+                                      {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2,
+                                      },
+                                    )}
                                   </p>
                                   <span
                                     className={`text-xs px-2 py-0.5 rounded-full font-semibold ${

@@ -16,6 +16,7 @@ interface XhrClientOptions {
 const AUTH_PATHS = ["/", "/default", "/auth/"];
 
 let isRefreshing = false;
+let isLoggingOut = false;
 let pendingQueue: Array<{
   resolve: (token: string) => void;
   reject: (err: unknown) => void;
@@ -29,6 +30,12 @@ function isAuthPage(): boolean {
   return AUTH_PATHS.some((p) =>
     p === "/" ? path === "/" : path.startsWith(p),
   );
+}
+
+function logoutUser() {
+  if (typeof window === "undefined" || isLoggingOut) return;
+  isLoggingOut = true;
+  window.location.href = "/auth/logout";
 }
 
 function processQueue(error: unknown, token: string | null) {
@@ -54,16 +61,19 @@ function doRefresh(): Promise<string> {
       if (xhr.status >= 200 && xhr.status < 300) {
         try {
           const res = JSON.parse(xhr.responseText);
-          if (res.jwt && res.refreshToken) {
-            updateJwtTokens(res.jwt, res.refreshToken);
-            resolve(res.jwt);
+          const payload = res?.data ?? res;
+          const jwt = payload?.jwt ?? payload?.accessToken ?? payload?.token;
+          const newRefreshToken = payload?.refreshToken;
+          if (jwt && newRefreshToken) {
+            updateJwtTokens(jwt, newRefreshToken);
+            resolve(jwt);
           } else {
             reject("Invalid refresh response");
           }
         } catch {
           reject("Failed to parse refresh response");
         }
-      } else {
+      } else if (xhr.status > 0) {
         reject("Refresh failed: " + xhr.status);
       }
     };
@@ -104,6 +114,21 @@ function executeOnce<T>(
 
     xhr.timeout = timeout;
 
+    const retryWithToken = (newToken: string) =>
+      executeOnce<T>(
+        api_url,
+        method,
+        { ...headers, Authorization: `Bearer ${newToken}` },
+        body,
+        maxRetries,
+        baseDelay,
+        timeout,
+        shouldRetry,
+        onRetry,
+        true,
+        0,
+      );
+
     xhr.onreadystatechange = () => {
       if (xhr.readyState !== 4) return;
 
@@ -127,35 +152,18 @@ function executeOnce<T>(
       }
 
       if (xhr.status === 401 && !isAuthPage() && !isRetryAfterRefresh) {
-        const storedRefresh = getRefreshToken();
-        if (!storedRefresh) {
-          window.location.href = "/auth/logout";
+        // No refresh token at all: nothing to wait for, session is over.
+        if (!getRefreshToken()) {
+          logoutUser();
           reject("Session expired.");
           return;
         }
 
+        // A refresh is already in flight: wait for its result.
         if (isRefreshing) {
           pendingQueue.push({
             resolve: (newToken) => {
-              const refreshedHeaders = {
-                ...headers,
-                Authorization: `Bearer ${newToken}`,
-              };
-              executeOnce<T>(
-                api_url,
-                method,
-                refreshedHeaders,
-                body,
-                maxRetries,
-                baseDelay,
-                timeout,
-                shouldRetry,
-                onRetry,
-                true,
-                0,
-              )
-                .then(resolve)
-                .catch(reject);
+              retryWithToken(newToken).then(resolve).catch(reject);
             },
             reject,
           });
@@ -163,36 +171,21 @@ function executeOnce<T>(
         }
 
         isRefreshing = true;
-        doRefresh()
-          .then((newToken) => {
-            processQueue(null, newToken);
-            const refreshedHeaders = {
-              ...headers,
-              Authorization: `Bearer ${newToken}`,
-            };
-            return executeOnce<T>(
-              api_url,
-              method,
-              refreshedHeaders,
-              body,
-              maxRetries,
-              baseDelay,
-              timeout,
-              shouldRetry,
-              onRetry,
-              true,
-              0,
-            );
-          })
-          .then(resolve)
-          .catch((err) => {
-            processQueue(err, null);
-            window.location.href = "/auth/logout";
-            reject(err);
-          })
-          .finally(() => {
+        doRefresh().then(
+          // Refresh succeeded: do NOT log out, retry the original request.
+          (newToken) => {
             isRefreshing = false;
-          });
+            processQueue(null, newToken);
+            retryWithToken(newToken).then(resolve).catch(reject);
+          },
+          // Refresh failed: only now log the user out.
+          (err) => {
+            isRefreshing = false;
+            processQueue(err, null);
+            logoutUser();
+            reject(err);
+          },
+        );
         return;
       }
 

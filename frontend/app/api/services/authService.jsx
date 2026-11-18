@@ -20,9 +20,7 @@ export const authService = {
   },
 
   refreshToken: (refreshToken) => {
-    return makePublicRequest(API_URLS.AUTH.REFRESH_TOKEN, "POST", {
-      refreshToken,
-    });
+    return makePublicRequest(API_URLS.AUTH.REFRESH_TOKEN, "POST", {refreshToken});
   },
 
   verifyToken: (token) => {

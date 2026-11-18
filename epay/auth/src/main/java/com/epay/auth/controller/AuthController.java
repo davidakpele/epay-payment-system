@@ -113,7 +113,7 @@ public class AuthController {
     public ResponseEntity<?> logout(@RequestParam(name = "userId", required = false) Long userId) {
         return authService.logoutUser(userId);
     }
-
+ 
     @Operation(
         summary     = "Refresh an access token",
         description = "Exchanges a valid REFRESH token for a new ACCESS token and REFRESH token pair. No re-login required while the user is active."

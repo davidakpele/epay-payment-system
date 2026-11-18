@@ -67,7 +67,7 @@
   width: 42px;
   height: 42px;
   border-radius: 50%;
-  background: #0f172a;
+  background: var(--bg-main);
   color: #ffffff;
 }
 
@@ -165,7 +165,7 @@
 
 /* ── Promo card ── */
 .rp-promo {
-  background: #0f172a;
+  background: var(--bg-main);
   border-radius: 16px;
   padding: 20px 16px;
   color: #fff;
