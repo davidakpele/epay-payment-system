@@ -136,8 +136,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             filterChain.doFilter(request, response);
 
         } catch (JwtAuthenticationException e) {
-            writeError(response, HttpServletResponse.SC_UNAUTHORIZED, e.getMessage(),
-                    com.epay.common.exception.ErrorCode.UNAUTHORIZED_ACCESS);
+            String errorCode = "TOKEN_EXPIRED".equals(e.getErrorCode())
+                    ? "TOKEN_EXPIRED"
+                    : com.epay.common.exception.ErrorCode.UNAUTHORIZED_ACCESS;
+            writeError(response, HttpServletResponse.SC_UNAUTHORIZED, e.getMessage(), errorCode);
         } catch (UsernameNotFoundException e) {
             writeError(response, HttpServletResponse.SC_UNAUTHORIZED, "User not found",
                     com.epay.common.exception.ErrorCode.UNAUTHORIZED_ACCESS);

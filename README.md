@@ -1874,7 +1874,7 @@ docker compose up --build
 | Frontend            | http://localhost         |
 | API (via Nginx)     | http://localhost/api/v1/ |
 | Swagger UI          | http://localhost/docs    |
-| RabbitMQ Management | http://localhost:15672   |
+| Kafka Management | http://localhost:8090   |
 | Prometheus          | http://localhost:9090    |
 | Grafana             | http://localhost:3010    |
 | Zipkin              | http://localhost:9411    |

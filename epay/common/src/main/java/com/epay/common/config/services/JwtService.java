@@ -122,6 +122,42 @@ public class JwtService implements IJwtService {
         return extractNestedString(token, "token", "type");
     }
 
+    public String extractTokenTypeIgnoreExpiry(String token) {
+        Claims claims = extractClaimsIgnoreExpiry(token);
+        Object tokenObj = claims.get("token");
+        if (tokenObj instanceof Map) {
+            @SuppressWarnings("unchecked")
+            Object type = ((Map<String, Object>) tokenObj).get("type");
+            return type != null ? type.toString() : null;
+        }
+        return null;
+    }
+
+    public String extractUsernameIgnoreExpiry(String token) {
+        return extractClaimsIgnoreExpiry(token).getSubject();
+    }
+
+    public String extractSessionIdIgnoreExpiry(String token) {
+        Claims claims = extractClaimsIgnoreExpiry(token);
+        Object sessionObj = claims.get("session");
+        if (sessionObj instanceof Map) {
+            @SuppressWarnings("unchecked")
+            Object id = ((Map<String, Object>) sessionObj).get("id");
+            return id != null ? id.toString() : null;
+        }
+        return null;
+    }
+
+    public boolean isRefreshTokenExpired(String token) {
+        try {
+            Claims claims = extractClaimsIgnoreExpiry(token);
+            Date exp = claims.getExpiration();
+            return exp != null && exp.before(new Date());
+        } catch (JwtAuthenticationException e) {
+            return true;
+        }
+    }
+
     @Override
     public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
         return claimsResolver.apply(extractAllClaims(token));
@@ -161,6 +197,33 @@ public class JwtService implements IJwtService {
         } catch (ExpiredJwtException e) {
             throw new JwtAuthenticationException("JWT token is expired",
                     HttpStatus.UNAUTHORIZED, "TOKEN_EXPIRED", e);
+        } catch (MalformedJwtException e) {
+            throw new JwtAuthenticationException("Invalid JWT token format",
+                    HttpStatus.UNAUTHORIZED, "INVALID_TOKEN_FORMAT", e);
+        } catch (SignatureException e) {
+            throw new JwtAuthenticationException("JWT signature does not match",
+                    HttpStatus.UNAUTHORIZED, "INVALID_SIGNATURE", e);
+        } catch (UnsupportedJwtException e) {
+            throw new JwtAuthenticationException("JWT token is unsupported",
+                    HttpStatus.UNAUTHORIZED, "UNSUPPORTED_TOKEN", e);
+        } catch (IllegalArgumentException e) {
+            throw new JwtAuthenticationException("JWT claims string is empty",
+                    HttpStatus.BAD_REQUEST, "EMPTY_TOKEN", e);
+        } catch (JwtException e) {
+            throw new JwtAuthenticationException("JWT validation failed",
+                    HttpStatus.UNAUTHORIZED, "TOKEN_VALIDATION_FAILED", e);
+        }
+    }
+
+    private Claims extractClaimsIgnoreExpiry(String token) {
+        try {
+            return Jwts.parserBuilder()
+                    .setSigningKey(signingKey)
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody();
+        } catch (ExpiredJwtException e) {
+            return e.getClaims();
         } catch (MalformedJwtException e) {
             throw new JwtAuthenticationException("Invalid JWT token format",
                     HttpStatus.UNAUTHORIZED, "INVALID_TOKEN_FORMAT", e);

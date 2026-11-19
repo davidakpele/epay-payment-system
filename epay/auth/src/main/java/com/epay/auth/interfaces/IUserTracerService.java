@@ -14,4 +14,6 @@ public interface IUserTracerService {
     boolean isSessionValid(String sessionId);
 
     void renewSession(String sessionId, Long userId);
+
+    void restoreSession(String sessionId, Long userId);
 }

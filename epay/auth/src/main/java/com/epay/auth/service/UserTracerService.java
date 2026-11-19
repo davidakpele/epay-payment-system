@@ -107,4 +107,15 @@ public class UserTracerService implements IUserTracerService {
             log.warn("[Session] Redis renew failed for sessionId={}: {}", sessionId, e.getMessage());
         }
     }
+
+    @Override
+    public void restoreSession(String sessionId, Long userId) {
+        try {
+            redisTemplate.opsForValue().set(KEY_ACTIVE + userId,  sessionId,              SESSION_TTL);
+            redisTemplate.opsForValue().set(KEY_BY_ID  + sessionId, String.valueOf(userId), SESSION_TTL);
+            log.info("[Session] Restored expired session={} for userId={}", sessionId, userId);
+        } catch (Exception e) {
+            log.warn("[Session] Redis restore failed for sessionId={}: {}", sessionId, e.getMessage());
+        }
+    }
 }

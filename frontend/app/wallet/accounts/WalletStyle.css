@@ -4072,7 +4072,7 @@
   background: #a1a2a429;
   border-color: #e2e8f0;
   border-radius: 8px;
-  padding:5px !important;
+  padding:0px !important;
 }
 .tab-button.active {
   background: var(--bg-main);

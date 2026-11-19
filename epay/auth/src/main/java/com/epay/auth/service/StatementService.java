@@ -48,7 +48,9 @@ import com.epay.auth.interfaces.IStatementService;
 import com.epay.common.interfaces.IAuthNotificationPublisher;
 import com.epay.domain.auth.dto.BankStatement;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class StatementService implements IStatementService {
@@ -702,10 +704,13 @@ public class StatementService implements IStatementService {
         try {
             byte[] pdfBytes = generateBankStatementPDF(statements);
             String period = getPeriodCovered(statements).replace(" ", "-").replace(":", "");
-            notificationPublisher.publishAccountStatement(email, username, pdfBytes, period);
-
+            try {
+                notificationPublisher.publishAccountStatement(email, username, pdfBytes, period);
+            } catch (Exception kafkaEx) {
+                log.error("[Statement] Notification dispatch failed for email={}: {}", email, kafkaEx.getMessage());
+            }
         } catch (Exception e) {
-            throw new RuntimeException("Failed to generate and send bank statement: " + e.getMessage(), e);
+            throw new RuntimeException("Failed to generate bank statement: " + e.getMessage(), e);
         }
     }
 }

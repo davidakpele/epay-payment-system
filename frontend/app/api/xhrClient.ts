@@ -1,4 +1,4 @@
-import { getRefreshToken, updateJwtTokens } from "./utils";
+import { getRefreshToken, getToken, updateJwtTokens } from "./utils";
 
 interface XhrClientOptions {
   maxRetries?: number;
@@ -43,6 +43,16 @@ function processQueue(error: unknown, token: string | null) {
   pendingQueue = [];
 }
 
+function isJwtExpired(jwt: string): boolean {
+  try {
+    const payload = JSON.parse(atob(jwt.split(".")[1]));
+    if (!payload.exp) return false;
+    return Date.now() / 1000 > payload.exp - 10;
+  } catch {
+    return false;
+  }
+}
+
 function doRefresh(): Promise<string> {
   return new Promise((resolve, reject) => {
     const refreshToken = getRefreshToken();
@@ -61,14 +71,13 @@ function doRefresh(): Promise<string> {
       if (xhr.status >= 200 && xhr.status < 300) {
         try {
           const res = JSON.parse(xhr.responseText);
-          const payload = res?.data ?? res;
-          const jwt = payload?.jwt ?? payload?.accessToken ?? payload?.token;
-          const newRefreshToken = payload?.refreshToken;
+          const jwt = res?.jwt ?? res?.accessToken ?? res?.token;
+          const newRefreshToken = res?.refreshToken;
           if (jwt && newRefreshToken) {
             updateJwtTokens(jwt, newRefreshToken);
             resolve(jwt);
           } else {
-            reject("Invalid refresh response");
+            reject("Invalid refresh response: missing jwt or refreshToken");
           }
         } catch {
           reject("Failed to parse refresh response");
@@ -82,6 +91,78 @@ function doRefresh(): Promise<string> {
     xhr.ontimeout = () => reject("Refresh timeout");
     xhr.send(JSON.stringify({ refreshToken }));
   });
+}
+
+function attemptRefreshThen<T>(
+  api_url: string,
+  method: string,
+  headers: Record<string, string>,
+  body: unknown,
+  maxRetries: number,
+  baseDelay: number,
+  timeout: number,
+  shouldRetry: (s: number) => boolean,
+  onRetry: (
+    attempt: number,
+    max: number,
+    delay: number,
+    status?: number,
+  ) => void,
+  resolve: (v: T) => void,
+  reject: (e: unknown) => void,
+) {
+  if (isRefreshing) {
+    pendingQueue.push({
+      resolve: (newToken) => {
+        executeOnce<T>(
+          api_url,
+          method,
+          { ...headers, Authorization: `Bearer ${newToken}` },
+          body,
+          maxRetries,
+          baseDelay,
+          timeout,
+          shouldRetry,
+          onRetry,
+          true,
+          0,
+        )
+          .then(resolve)
+          .catch(reject);
+      },
+      reject,
+    });
+    return;
+  }
+
+  isRefreshing = true;
+  doRefresh().then(
+    (newToken) => {
+      isRefreshing = false;
+      processQueue(null, newToken);
+      executeOnce<T>(
+        api_url,
+        method,
+        { ...headers, Authorization: `Bearer ${newToken}` },
+        body,
+        maxRetries,
+        baseDelay,
+        timeout,
+        shouldRetry,
+        onRetry,
+        true,
+        0,
+      )
+        .then(resolve)
+        .catch(reject);
+    },
+    (err) => {
+      isRefreshing = false;
+      processQueue(err, null);
+      // logoutUser();
+      reject(err);
+    },
+  );
 }
 
 function executeOnce<T>(
@@ -102,6 +183,27 @@ function executeOnce<T>(
   isRetryAfterRefresh: boolean,
   retryCount: number,
 ): Promise<T> {
+  if (!isRetryAfterRefresh && !isAuthPage()) {
+    const currentJwt = getToken();
+    if (currentJwt && isJwtExpired(currentJwt) && getRefreshToken()) {
+      return new Promise<T>((resolve, reject) => {
+        attemptRefreshThen<T>(
+          api_url,
+          method,
+          headers,
+          body,
+          maxRetries,
+          baseDelay,
+          timeout,
+          shouldRetry,
+          onRetry,
+          resolve,
+          reject,
+        );
+      });
+    }
+  }
+
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open(method, api_url);
@@ -114,29 +216,8 @@ function executeOnce<T>(
 
     xhr.timeout = timeout;
 
-    const retryWithToken = (newToken: string) =>
-      executeOnce<T>(
-        api_url,
-        method,
-        { ...headers, Authorization: `Bearer ${newToken}` },
-        body,
-        maxRetries,
-        baseDelay,
-        timeout,
-        shouldRetry,
-        onRetry,
-        true,
-        0,
-      );
-
     xhr.onreadystatechange = () => {
       if (xhr.readyState !== 4) return;
-
-      if (xhr.status === 503 && !isAuthPage()) {
-        window.location.href = "/auth/logout";
-        reject("Service unavailable.");
-        return;
-      }
 
       if (xhr.status >= 200 && xhr.status < 300) {
         if (!xhr.responseText || xhr.responseText.trim() === "") {
@@ -152,39 +233,23 @@ function executeOnce<T>(
       }
 
       if (xhr.status === 401 && !isAuthPage() && !isRetryAfterRefresh) {
-        // No refresh token at all: nothing to wait for, session is over.
         if (!getRefreshToken()) {
-          logoutUser();
+          // logoutUser();
           reject("Session expired.");
           return;
         }
-
-        // A refresh is already in flight: wait for its result.
-        if (isRefreshing) {
-          pendingQueue.push({
-            resolve: (newToken) => {
-              retryWithToken(newToken).then(resolve).catch(reject);
-            },
-            reject,
-          });
-          return;
-        }
-
-        isRefreshing = true;
-        doRefresh().then(
-          // Refresh succeeded: do NOT log out, retry the original request.
-          (newToken) => {
-            isRefreshing = false;
-            processQueue(null, newToken);
-            retryWithToken(newToken).then(resolve).catch(reject);
-          },
-          // Refresh failed: only now log the user out.
-          (err) => {
-            isRefreshing = false;
-            processQueue(err, null);
-            logoutUser();
-            reject(err);
-          },
+        attemptRefreshThen<T>(
+          api_url,
+          method,
+          headers,
+          body,
+          maxRetries,
+          baseDelay,
+          timeout,
+          shouldRetry,
+          onRetry,
+          resolve,
+          reject,
         );
         return;
       }
@@ -243,10 +308,7 @@ function executeOnce<T>(
           message: string;
           status: number;
           [key: string]: unknown;
-        } = {
-          message: "An error occurred",
-          status: xhr.status,
-        };
+        } = { message: "An error occurred", status: xhr.status };
         try {
           errorPayload = {
             ...JSON.parse(xhr.responseText),

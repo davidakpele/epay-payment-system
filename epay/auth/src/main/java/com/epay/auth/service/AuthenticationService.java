@@ -2,7 +2,6 @@ package com.epay.auth.service;
 
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.util.Calendar;
 import java.util.Date;
@@ -12,6 +11,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -22,6 +22,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import com.epay.auth.interfaces.IAuthenticationService;
 import com.epay.auth.interfaces.IAuthorizeUserVerificationService;
 import com.epay.auth.interfaces.IMessagingService;
@@ -59,6 +60,7 @@ import com.epay.domain.auth.repository.UserRepository;
 import com.epay.domain.auth.repository.VerificationTokenRepository;
 import com.epay.domain.auth.response.AuthResponse;
 import com.epay.domain.auth.response.VerificationTokenResult;
+
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -832,21 +834,18 @@ public class AuthenticationService implements IAuthenticationService{
         String token = refreshToken.startsWith("Bearer ") ? refreshToken.substring(7).trim() : refreshToken.trim();
 
         try {
-            String tokenType = jwtService.extractTokenType(token);
+            String tokenType = jwtService.extractTokenTypeIgnoreExpiry(token);
             if (!"REFRESH".equalsIgnoreCase(tokenType)) {
                 return buildAuthError(resp, "Invalid token type. Expected REFRESH token.", HttpStatus.UNAUTHORIZED);
             }
 
-            if (jwtService.isTokenExpired(token)) {
+            if (jwtService.isRefreshTokenExpired(token)) {
                 return buildAuthError(resp, "Refresh token has expired. Please log in again.", HttpStatus.UNAUTHORIZED);
             }
 
-            String sessionId = jwtService.extractSessionId(token);
-            if (sessionId != null && !userTracerService.isSessionValid(sessionId)) {
-                return buildAuthError(resp, "Session has been invalidated. Please log in again.", HttpStatus.UNAUTHORIZED);
-            }
+            String sessionId = jwtService.extractSessionIdIgnoreExpiry(token);
 
-            String subject = jwtService.extractUsername(token);
+            String subject = jwtService.extractUsernameIgnoreExpiry(token);
             User user = null;
             try {
                 UUID userUuid = UUID.fromString(subject);
@@ -865,6 +864,14 @@ public class AuthenticationService implements IAuthenticationService{
                 return buildAuthError(resp, "Account is not verified.", HttpStatus.UNAUTHORIZED);
             }
 
+            if (sessionId != null) {
+                if (!userTracerService.isSessionValid(sessionId)) {
+                    userTracerService.restoreSession(sessionId, user.getId());
+                } else {
+                    userTracerService.renewSession(sessionId, user.getId());
+                }
+            }
+
             String newTokenId = UUID.randomUUID().toString();
             String newAccessToken = jwtService.generateToken(
                     user,
@@ -873,10 +880,6 @@ public class AuthenticationService implements IAuthenticationService{
                     List.of("PASSWORD")
             );
             String newRefreshToken = jwtService.generateRefreshToken(user, sessionId, newTokenId);
-
-            if (sessionId != null) {
-                userTracerService.renewSession(sessionId, user.getId());
-            }
 
             resp.put("jwt", newAccessToken);
             resp.put("refreshToken", newRefreshToken);
