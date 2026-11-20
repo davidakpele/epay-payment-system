@@ -1,0 +1,132 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: epay-server
+  namespace: epay
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: epay-server
+  template:
+    metadata:
+      labels:
+        app: epay-server
+    spec:
+      containers:
+        - name: epay-server
+          image: epay-server:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8029
+          envFrom:
+            - configMapRef:
+                name: epay-server-config
+          env:
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: epay-db-secret
+                  key: db-username
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: epay-db-secret
+                  key: db-password
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: epay-app-secret
+                  key: jwt-secret
+            - name: PAYSTACK_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: epay-app-secret
+                  key: paystack-secret-key
+            - name: GMAIL_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: epay-app-secret
+                  key: gmail-username
+            - name: GMAIL_APP_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: epay-app-secret
+                  key: gmail-app-password
+            - name: SUPER_ADMIN_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: epay-app-secret
+                  key: super-admin-username
+            - name: SUPER_ADMIN_EMAIL
+              valueFrom:
+                secretKeyRef:
+                  name: epay-app-secret
+                  key: super-admin-email
+            - name: SUPER_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: epay-app-secret
+                  key: super-admin-password
+            - name: SUPER_ADMIN_FIRST_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: epay-app-secret
+                  key: super-admin-first-name
+            - name: SUPER_ADMIN_LAST_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: epay-app-secret
+                  key: super-admin-last-name
+            - name: INSTANCE_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          volumeMounts:
+            - name: uploads
+              mountPath: /var/www/uploads
+            - name: logs
+              mountPath: /var/log/epay
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8029
+            initialDelaySeconds: 90
+            periodSeconds: 15
+            timeoutSeconds: 10
+            failureThreshold: 15
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8029
+            initialDelaySeconds: 120
+            periodSeconds: 20
+            timeoutSeconds: 10
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 500m
+              memory: 512Mi
+            limits:
+              cpu: 2000m
+              memory: 2Gi
+      volumes:
+        - name: uploads
+          persistentVolumeClaim:
+            claimName: app-uploads
+        - name: logs
+          persistentVolumeClaim:
+            claimName: epay-logs
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: epay-server
+  namespace: epay
+spec:
+  selector:
+    app: epay-server
+  ports:
+    - port: 8029
+      targetPort: 8029

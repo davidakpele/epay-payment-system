@@ -1,0 +1,192 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: epay-server-config
+  namespace: epay
+data:
+  SPRING_PROFILES_ACTIVE: "prod"
+  SPRING_DATASOURCE_URL: "jdbc:postgresql://postgres:5432/epay"
+  REDIS_HOST: "redis"
+  REDIS_PORT: "6379"
+  SPRING_KAFKA_BOOTSTRAP_SERVERS: "kafka:29092"
+  KAFKA_LISTENER_CONCURRENCY: "3"
+  SERVER_PORT: "8029"
+  ANTHROPIC_MODEL: "claude-sonnet-4-20250514"
+  SWAGGER_ENABLED: "true"
+  SPRING_DATASOURCE_HIKARI_MAXIMUM-POOL-SIZE: "10"
+  SPRING_DATASOURCE_HIKARI_MINIMUM-IDLE: "5"
+  SPRING_DATASOURCE_HIKARI_IDLE-TIMEOUT: "300000"
+  SPRING_DATASOURCE_HIKARI_CONNECTION-TIMEOUT: "30000"
+  SPRING_DATASOURCE_HIKARI_MAX-LIFETIME: "1800000"
+  SPRING_REDIS_LETTUCE_POOL_MAX-ACTIVE: "20"
+  SPRING_REDIS_LETTUCE_POOL_MAX-IDLE: "10"
+  SPRING_REDIS_LETTUCE_POOL_MIN-IDLE: "5"
+  SUPER_ADMIN_PHONE: ""
+  BANKING_SERVICE_EMAIL: ""
+  FLUTTERWAVE_SECRET_KEY: ""
+  FLUTTERWAVE_PUBLIC_KEY: ""
+  TWILIO_ACCOUNT_SID: ""
+  TWILIO_AUTH_TOKEN: ""
+  TWILIO_WHATSAPP_NUMBER: ""
+  ANTHROPIC_API_KEY: ""
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: epay-frontend-config
+  namespace: epay
+data:
+  NODE_ENV: "production"
+  NEXT_PUBLIC_API_URL: "http://nginx/api"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-main-conf
+  namespace: epay
+data:
+  nginx.conf: |
+    worker_processes auto;
+    worker_rlimit_nofile 65535;
+
+    events {
+        worker_connections 4096;
+        multi_accept on;
+    }
+
+    http {
+        include /etc/nginx/mime.types;
+        default_type application/octet-stream;
+
+        include /etc/nginx/conf.d/01-security-headers.conf;
+        include /etc/nginx/conf.d/02-rate-limiting.conf;
+        include /etc/nginx/conf.d/03-bot-detection.conf;
+        include /etc/nginx/conf.d/04-upstreams.conf;
+        include /etc/nginx/conf.d/11-content-cache.conf;
+        include /etc/nginx/conf.d/globalblacklist.conf;
+
+        server_tokens off;
+        client_max_body_size 50M;
+        send_timeout 60s;
+        keepalive_timeout 65;
+        keepalive_requests 100;
+        client_body_timeout 10s;
+        client_header_timeout 10s;
+        proxy_connect_timeout 60s;
+        proxy_read_timeout 60s;
+        proxy_send_timeout 60s;
+        reset_timedout_connection on;
+
+        sendfile on;
+        tcp_nopush on;
+        tcp_nodelay on;
+
+        client_body_buffer_size 16K;
+        client_header_buffer_size 4k;
+        large_client_header_buffers 8 16k;
+        proxy_buffer_size 32k;
+        proxy_buffers 8 32k;
+        proxy_busy_buffers_size 64k;
+
+        set_real_ip_from 10.0.0.0/8;
+        set_real_ip_from 172.16.0.0/12;
+        set_real_ip_from 192.168.0.0/16;
+        real_ip_header X-Forwarded-For;
+        real_ip_recursive on;
+
+        gzip on;
+        gzip_vary on;
+        gzip_proxied any;
+        gzip_min_length 1024;
+        gzip_comp_level 6;
+        gzip_types text/plain text/css text/xml text/javascript application/javascript application/xml+rss application/json application/xml application/x-font-ttf font/opentype image/svg+xml;
+        gzip_disable "msie6";
+
+        log_format json_combined escape=json
+            '{'
+            '"timestamp":"$time_local",'
+            '"remote_addr":"$remote_addr",'
+            '"request_method":"$request_method",'
+            '"request_uri":"$request_uri",'
+            '"status":"$status",'
+            '"body_bytes_sent":"$body_bytes_sent",'
+            '"request_time":"$request_time",'
+            '"upstream_response_time":"$upstream_response_time",'
+            '"http_user_agent":"$http_user_agent",'
+            '"request_id":"$req_id"'
+            '}';
+
+        log_format security_log escape=json
+            '{'
+            '"timestamp":"$time_iso8601",'
+            '"client_ip":"$remote_addr",'
+            '"request_method":"$request_method",'
+            '"request_uri":"$request_uri",'
+            '"status":"$status",'
+            '"user_agent":"$http_user_agent",'
+            '"request_time":"$request_time",'
+            '"request_id":"$req_id"'
+            '}';
+
+        access_log /var/log/nginx/access.log json_combined;
+        error_log  /var/log/nginx/error.log warn;
+
+        map $status $loggable {
+            ~^[23] 0;
+            default 1;
+        }
+
+        map $request_id $req_id {
+            default $request_id;
+        }
+
+        map $http_upgrade $http_connection {
+            default   keep-alive;
+            websocket upgrade;
+        }
+
+        include /etc/nginx/conf.d/05-server-http.conf;
+        include /etc/nginx/conf.d/06-server-https.conf;
+        include /etc/nginx/conf.d/07-error-pages.conf;
+        include /etc/nginx/conf.d/08-security-blocks.conf;
+        include /etc/nginx/conf.d/09-administrative-security.conf;
+        include /etc/nginx/conf.d/10-health-checks.conf;
+        include /etc/nginx/conf.d/12-stub-status.conf;
+    }
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-upstreams-conf
+  namespace: epay
+data:
+  04-upstreams.conf: |
+    upstream epay_backend {
+        least_conn;
+        server epay-server:8029 max_fails=3 fail_timeout=30s weight=1;
+        keepalive 32;
+        keepalive_requests 1000;
+        keepalive_timeout 60s;
+    }
+
+    upstream epay_frontend {
+        least_conn;
+        server frontend:3000 max_fails=3 fail_timeout=30s weight=1;
+        keepalive 16;
+        keepalive_requests 1000;
+        keepalive_timeout 60s;
+    }
+
+    upstream epay_websocket {
+        ip_hash;
+        server epay-server:8029;
+        keepalive 32;
+    }
+
+    upstream epay_admin {
+        least_conn;
+        server epay-server:8029 weight=2;
+    }
