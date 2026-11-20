@@ -2316,7 +2316,7 @@ Initialise
 | postgres-exporter | http://localhost:9187 | PostgreSQL → Prometheus                          |
 | redis-exporter    | http://localhost:9121 | Redis → Prometheus                               |
 | nginx-exporter    | http://localhost:9113 | Nginx stub_status → Prometheus                   |
-
+| kubernates        | http://localhost:8001 |  Kubernate →    ui                |
 ### Alertmanager
 
 Alertmanager receives all alerts defined in `epay/monitoring/prometheus/alert.rules.yml` and routes them by severity and service:
