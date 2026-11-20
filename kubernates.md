@@ -202,6 +202,38 @@ kubectl rollout restart deployment/epay-server -n epay
 
 ```powershell
 # View logs for a pod
+kubectl -n epay get pods kafka-0 -w 
+kubectl -n epay get pod kafka-0 -o jsonpath="{.spec.containers[0].livenessProbe}"
+kubectl -n epay get pods kafka-0 -w  
+kubectl -n epay logs kafka-0 --previous --tail=40  
+kubectl -n epay exec kafka-0 -- kafka-topics --bootstrap-server localhost:9092 --list
+kubectl -n epay delete pod kafka-0  
+kubectl get events -n headlamp
+kubectl get pods -n headlamp
+kubectl create token headlamp -n headlamp
+kubectl port-forward -n headlamp svc/headlamp 8001:80
+kubectl -n kube-system port-forward svc/headlamp 8001:80
+kubectl get events -n headlamp --sort-by=.lastTimestamp
+kubectl get pods -n headlamp -w
+kubectl logs headlamp-86c49cb4f4-f69hg -n headlamp
+kubectl describe pod headlamp-86c49cb4f4-f69hg -n headlamp
+kubectl get svc -n headlamp
+kubectl create clusterrolebinding headlamp-admin --serviceaccount=kube-system:headlamp --clusterrole=cluster-admin
+kubectl delete clusterrolebinding headlamp-admin
+kubectl create namespace headlamp
+helm repo update
+helm repo add headlamp https://kubernetes-sigs.github.io/headlamp/
+kubectl get svc -A | findstr headlamp
+kubectl get pods -A | findstr headlamp
+kubectl get namespaces
+helm version
+winget install Helm.Helm
+winget install Headlamp.Headlamp
+helm install headlamp headlamp/headlamp --namespace headlamp
+kubectl -n epay logs deploy/epay-server --tail=20
+kubectl -n epay get pods kafka-0 -w
+kubectl -n epay get pod kafka-0 -o jsonpath="{.spec.containers[0].livenessProbe}"
+kubectl -n epay exec kafka-0 -- kafka-topics --bootstrap-server localhost:9092 --list
 kubectl logs -n epay deployment/epay-server -f
 kubectl logs -n epay deployment/frontend -f
 kubectl logs -n epay deployment/nginx -f
