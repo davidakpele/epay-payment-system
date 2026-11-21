@@ -305,7 +305,7 @@
             <version>${rest-assured.version}</version>
             <scope>test</scope>
         </dependency>
-
+        
         <!-- Awaitility — async condition polling in tests -->
         <dependency>
             <groupId>org.awaitility</groupId>

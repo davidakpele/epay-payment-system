@@ -6,6 +6,8 @@ param(
 
 $Root = Split-Path $PSScriptRoot -Parent
 $ClusterName = "local-dev"
+$env:DOCKER_BUILDKIT = "1"
+$env:COMPOSE_DOCKER_CLI_BUILD = "1"
 
 function Write-Step($msg) {
     Write-Host ""param(
