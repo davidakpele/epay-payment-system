@@ -1,0 +1,255 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: epay
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+      external_labels:
+        environment: local
+        project: epay
+
+    alerting:
+      alertmanagers:
+        - static_configs:
+            - targets:
+                - alertmanager:9093
+
+    rule_files:
+      - /etc/prometheus/alert.rules.yml
+
+    scrape_configs:
+      - job_name: epay-server
+        metrics_path: /actuator/prometheus
+        scrape_interval: 15s
+        scrape_timeout: 10s
+        static_configs:
+          - targets:
+              - "epay-server:8029"
+            labels:
+              service: epay-server
+              tier: backend
+
+      - job_name: nginx
+        scrape_interval: 30s
+        scrape_timeout: 10s
+        static_configs:
+          - targets: ["nginx-exporter:9113"]
+            labels:
+              service: nginx
+              tier: load-balancer
+
+      - job_name: redis
+        scrape_interval: 30s
+        scrape_timeout: 10s
+        static_configs:
+          - targets: ["redis-exporter:9121"]
+            labels:
+              service: redis
+              tier: cache
+
+      - job_name: postgresql
+        scrape_interval: 60s
+        scrape_timeout: 30s
+        static_configs:
+          - targets: ["postgres-exporter:9187"]
+            labels:
+              service: postgresql
+              tier: database
+
+      - job_name: prometheus
+        static_configs:
+          - targets: ["localhost:9090"]
+            labels:
+              service: prometheus
+              tier: monitoring
+
+  alert.rules.yml: |
+    groups:
+      - name: epay-alerts
+        interval: 30s
+        rules:
+          - alert: BackendInstanceDown
+            expr: up{job="epay-server"} == 0
+            for: 1m
+            labels:
+              severity: critical
+              service: epay-backend
+            annotations:
+              summary: "Backend instance {{ $labels.instance }} is down"
+              description: "{{ $labels.instance }} has been down for more than 1 minute"
+              action: "Check service logs and restart if needed"
+
+          - alert: BackendHighErrorRate
+            expr: rate(http_server_requests_seconds_count{job="epay-server", status=~"5.."}[5m]) / rate(http_server_requests_seconds_count{job="epay-server"}[5m]) * 100 > 5
+            for: 5m
+            labels:
+              severity: critical
+              service: epay-backend
+            annotations:
+              summary: "High error rate on {{ $labels.instance }}"
+              description: "Error rate is {{ $value }}%"
+              action: "Check application logs for exceptions"
+
+          - alert: BackendHighMemory
+            expr: (jvm_memory_max_bytes{job="epay-server"} - jvm_memory_used_bytes{job="epay-server"}) / jvm_memory_max_bytes{job="epay-server"} * 100 < 20
+            for: 5m
+            labels:
+              severity: warning
+              service: epay-backend
+            annotations:
+              summary: "High memory usage on {{ $labels.instance }}"
+              description: "Free memory is {{ $value }}%"
+              action: "Consider increasing memory limits"
+
+          - alert: PostgreSQLDown
+            expr: up{job="postgresql"} == 0
+            for: 1m
+            labels:
+              severity: critical
+              service: postgresql
+            annotations:
+              summary: "PostgreSQL is down"
+              description: "The database is not responding"
+              action: "Immediate investigation"
+
+          - alert: RedisDown
+            expr: up{job="redis"} == 0
+            for: 1m
+            labels:
+              severity: critical
+              service: redis
+            annotations:
+              summary: "Redis is down"
+              description: "The cache service is not responding"
+              action: "Immediate investigation"
+
+          - alert: HighDiskUsage
+            expr: (node_filesystem_size_bytes - node_filesystem_free_bytes) / node_filesystem_size_bytes * 100 > 85
+            for: 5m
+            labels:
+              severity: warning
+              service: storage
+            annotations:
+              summary: "High disk usage on {{ $labels.instance }}"
+              description: "{{ $value }}% of disk space is used"
+              action: "Clean up old logs or increase disk space"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alertmanager-config
+  namespace: epay
+data:
+  alertmanager.yml: |
+    global:
+      resolve_timeout: 5m
+      smtp_smarthost: "smtp.gmail.com:587"
+      smtp_from: "alerts@epay.app"
+      smtp_auth_username: "akpeledavidprogress@gmail.com"
+      smtp_auth_password: "eruxeybiakedfjfp"
+      smtp_require_tls: true
+
+    route:
+      receiver: "email-team"
+      group_by: ["alertname", "service", "severity"]
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 4h
+      routes:
+        - match:
+            severity: critical
+          receiver: "email-critical"
+          group_wait: 10s
+          repeat_interval: 1h
+          continue: true
+        - match:
+            severity: warning
+          receiver: "email-team"
+          repeat_interval: 6h
+
+    inhibit_rules:
+      - source_match:
+          severity: critical
+        target_match:
+          severity: warning
+        equal: ["service"]
+
+    receivers:
+      - name: "email-team"
+        email_configs:
+          - to: "team@epay.app"
+            send_resolved: true
+
+      - name: "email-critical"
+        email_configs:
+          - to: "willstonestrategic@gmail.com"
+            send_resolved: true
+            headers:
+              Subject: "CRITICAL — {{ .GroupLabels.alertname }} ({{ .GroupLabels.service }})"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: loki-config
+  namespace: epay
+data:
+  loki-config.yml: |
+    auth_enabled: false
+
+    server:
+      http_listen_port: 3100
+      grpc_listen_port: 9096
+      log_level: warn
+
+    common:
+      path_prefix: /loki
+      storage:
+        filesystem:
+          chunks_directory: /loki/chunks
+          rules_directory: /loki/rules
+      replication_factor: 1
+      ring:
+        instance_addr: 127.0.0.1
+        kvstore:
+          store: inmemory
+
+    schema_config:
+      configs:
+        - from: 2024-01-01
+          store: tsdb
+          object_store: filesystem
+          schema: v13
+          index:
+            prefix: index_
+            period: 24h
+
+    ingester:
+      chunk_idle_period: 5m
+      chunk_retain_period: 30s
+      wal:
+        enabled: true
+        dir: /loki/wal
+
+    limits_config:
+      allow_structured_metadata: true
+      volume_enabled: true
+      retention_period: 336h
+
+    compactor:
+      working_directory: /loki/compactor
+      retention_enabled: true
+      retention_delete_delay: 2h
+      delete_request_store: filesystem
+
+    query_range:
+      results_cache:
+        cache:
+          embedded_cache:
+            enabled: true
+            max_size_mb: 100

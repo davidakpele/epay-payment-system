@@ -61,28 +61,28 @@ Managing money in Africa involves fragmented tools: one app for bank transfers, 
 
 ### Backend
 
-| Technology            | Version                    | Purpose                                 |
-| --------------------- | -------------------------- | --------------------------------------- |
-| Java                  | 21                         | Runtime — virtual thread capable        |
-| Spring Boot           | 4.1.0                      | Framework                               |
-| Spring Security       | 6 + OAuth2 Resource Server | Authentication & authorization          |
-| PostgreSQL            | 16                         | Primary relational database             |
-| Redis                 | 7                          | Session storage, rate-limiting, caching |
-| RabbitMQ              | 3.13                       | Async messaging (notifications, events) |
-| JJWT                  | 0.11.5                     | JWT creation and validation             |
-| MapStruct             | 1.4.2                      | DTO mapping                             |
-| Lombok                | 1.18.40                    | Boilerplate reduction                   |
-| Micrometer + Brave    | latest                     | Distributed tracing (Zipkin)            |
-| Prometheus Micrometer | latest                     | Metrics export                          |
-| springdoc-openapi     | 2.8.5                      | Swagger UI + OpenAPI 3 docs             |
-| Paystack SDK          | REST                       | Deposit, withdrawal, bank verification  |
-| Flutterwave SDK       | REST                       | Deposit, withdrawal                     |
-| Twilio                | 10.5.1                     | SMS OTP delivery                        |
-| Spring Mail           | latest                     | Email (Gmail SMTP)                      |
-| Thymeleaf             | latest                     | Email templates                         |
-| TOTP                  | dev.samstevens 1.7.1       | Google Authenticator-compatible 2FA     |
-| Snowflake ID          | 1.0.0                      | Distributed-safe unique ID generation   |
-| Caffeine              | latest                     | In-process L1 cache                     |
+| Technology              | Version                    | Purpose                                 |
+| ----------------------- | -------------------------- | --------------------------------------- |
+| Java                    | 21                         | Runtime — virtual thread capable        |
+| Spring Boot             | 4.1.0                      | Framework                               |
+| Spring Security         | 6 + OAuth2 Resource Server | Authentication & authorization          |
+| PostgreSQL              | 16                         | Primary relational database             |
+| Redis                   | 7                          | Session storage, rate-limiting, caching |
+| Spring Mail + Thymeleaf | latest                     | Direct async email notifications        |
+| JJWT                    | 0.11.5                     | JWT creation and validation             |
+| MapStruct               | 1.4.2                      | DTO mapping                             |
+| Lombok                  | 1.18.40                    | Boilerplate reduction                   |
+| Micrometer + Brave      | latest                     | Distributed tracing (Zipkin)            |
+| Prometheus Micrometer   | latest                     | Metrics export                          |
+| springdoc-openapi       | 2.8.5                      | Swagger UI + OpenAPI 3 docs             |
+| Paystack SDK            | REST                       | Deposit, withdrawal, bank verification  |
+| Flutterwave SDK         | REST                       | Deposit, withdrawal                     |
+| Twilio                  | 10.5.1                     | SMS OTP delivery                        |
+| Spring Mail             | latest                     | Email (Gmail SMTP)                      |
+| Thymeleaf               | latest                     | Email templates                         |
+| TOTP                    | dev.samstevens 1.7.1       | Google Authenticator-compatible 2FA     |
+| Snowflake ID            | 1.0.0                      | Distributed-safe unique ID generation   |
+| Caffeine                | latest                     | In-process L1 cache                     |
 
 ### Frontend
 
@@ -105,7 +105,6 @@ Managing money in Africa involves fragmented tools: one app for bank transfers, 
 | Nginx             | 1.27-alpine                               | Reverse proxy + WAF + load balancer    |
 | PostgreSQL        | 16-alpine                                 | Primary relational database            |
 | Redis             | 7-alpine                                  | Cache + sessions (LRU, 256 MB cap)     |
-| RabbitMQ          | 3.13-management-alpine                    | Async message broker                   |
 | Zipkin            | latest                                    | Distributed tracing                    |
 | Prometheus        | v2.51.2                                   | Metrics scraping (15-day retention)    |
 | Grafana           | 10.4.2                                    | Metrics dashboards (port 3010)         |
@@ -148,8 +147,8 @@ Internet
                │                      │                  │
                ▼                      ▼                  ▼
         ┌──────────┐          ┌──────────┐      ┌──────────────┐
-        │PostgreSQL│          │  Redis   │      │  RabbitMQ    │
-        │ :5432    │          │  :6379   │      │  :5672       │
+        │PostgreSQL│          │  Redis   │      │  SMTP/Mail   │
+        │ :5432    │          │  :6379   │      │  (Gmail)     │
         └──────────┘          └──────────┘      └──────────────┘
 ```
 
@@ -346,7 +345,7 @@ The backend is a Maven multi-module project with 18 modules:
 ```
 epay/
 ├── domain/          # Shared JPA entities, DTOs, enums, repository interfaces
-├── common/          # Security, JWT, filters, RabbitMQ, caching, exceptions
+├── common/          # Security, JWT, filters, caching, exceptions
 ├── auth/            # Registration, login, KYC, 2FA, password reset, settings
 ├── wallet/          # Multi-currency wallet, transfers, swaps, PIN management
 ├── deposit/         # Paystack/Flutterwave deposits + inbound webhooks
@@ -358,7 +357,7 @@ epay/
 ├── bank/            # Bank account management, Paystack bank verification
 ├── history/         # Transaction history, audit logs, statement generation
 ├── admin/           # Full admin back-office suite
-├── notification/    # Async notifications via RabbitMQ (email + push)
+├── notification/    # Direct async email dispatch (JavaMailSender + Thymeleaf)
 ├── blacklist/       # Blacklist service
 ├── escrow/          # Escrow (domain model complete, controller in progress)
 ├── savings/         # Savings plans (domain model complete, controller in progress)
@@ -689,8 +688,8 @@ The entire stack runs from a single `docker-compose.yml` at the project root. Ev
 ```
 postgres ──┐
 redis    ──┼──► epay-server-1 ─┐
-rabbitmq ──┘    epay-server-2 ─┼──► frontend-1 ─┐
-                epay-server-3 ─┘    frontend-2 ─┼──► nginx (port 80/443)
+           │    epay-server-2 ─┼──► frontend-1 ─┐
+           └    epay-server-3 ─┘    frontend-2 ─┼──► nginx (port 80/443)
                                     frontend-3 ─┘
 ```
 
@@ -702,7 +701,6 @@ All `depends_on` conditions use `condition: service_healthy` — services only s
 | ------------------- | ------------------------------------------------ | ------------ | -------------- | ----------------------------------------------- |
 | `postgres`          | `postgres:16-alpine`                             | 5432         | 5432           | Primary relational database                     |
 | `redis`             | `redis:7-alpine`                                 | 6379         | 6379           | Session store, rate-limit state, cache          |
-| `rabbitmq`          | `rabbitmq:3.13-management-alpine`                | 5672, 15672  | 5672, 15672    | Async message broker + management UI            |
 | `zipkin`            | `openzipkin/zipkin:latest`                       | 9411         | 9411           | Distributed tracing (in-memory storage)         |
 | `epay-server-1`     | `epay-server:latest` (built from `./epay`)       | **8021**     | 8029           | Backend replica 1 — `INSTANCE_ID=epay-server-1` |
 | `epay-server-2`     | `epay-server:latest`                             | **8022**     | 8029           | Backend replica 2 — `INSTANCE_ID=epay-server-2` |
@@ -759,7 +757,6 @@ The same `&frontend-base` anchor pattern is used for `frontend-1/2/3`.
 | --------------- | ------------------------------------------------- | -------- | ------- | ------------ |
 | `postgres`      | `pg_isready -U $DB_USERNAME -d epay`              | 10s      | 5       | 20s          |
 | `redis`         | `redis-cli ping`                                  | 10s      | 5       | —            |
-| `rabbitmq`      | `rabbitmq-diagnostics check_port_connectivity`    | 10s      | 5       | 30s          |
 | `epay-server-*` | `wget -qO- http://localhost:8029/actuator/health` | 30s      | 3       | **60s**      |
 | `frontend-*`    | `wget -qO- http://localhost:3000`                 | 30s      | 3       | 40s          |
 | `nginx`         | `wget --spider http://localhost/nginx-health`     | 30s      | 3       | 40s          |
@@ -785,13 +782,6 @@ The shared `epay-server-base` anchor includes tuned environment variables for co
 | `MAX-ACTIVE` | 20 | Max concurrent Redis connections |
 | `MAX-IDLE` | 10 | Max idle connections in pool |
 | `MIN-IDLE` | 5 | Connections held open when idle |
-
-**RabbitMQ listener:**
-| Parameter | Value | Effect |
-| ----------------- | ----- | ----------------------------------------------- |
-| `CONCURRENCY` | 3 | Min consumer threads per instance |
-| `MAX-CONCURRENCY` | 10 | Max consumer threads under load |
-| `PREFETCH` | 5 | Messages fetched ahead per consumer thread |
 
 **Redis configuration flags** (set on the `redis` service command):
 
@@ -824,7 +814,6 @@ This fixed subnet ensures the Nginx `set_real_ip_from` and `allow/deny` directiv
 | ----------------- | --------------------------- | -------------------------------------------- |
 | `postgres_data`   | postgres                    | PostgreSQL data files                        |
 | `redis_data`      | redis                       | Redis AOF persistence                        |
-| `rabbitmq_data`   | rabbitmq                    | RabbitMQ message store                       |
 | `app_uploads`     | epay-server-1/2/3           | User-uploaded files (shared across replicas) |
 | `epay_logs`       | epay-server-1/2/3, promtail | Application log files shipped by Promtail    |
 | `prometheus_data` | prometheus                  | Metrics time-series (15-day retention)       |
@@ -838,12 +827,12 @@ The `app_uploads` volume is shared read-write across all three backend instances
 
 Every service sets JSON log rotation via Docker's `json-file` driver to prevent disk exhaustion:
 
-| Service group                          | Max file size | Max files | Max total  |
-| -------------------------------------- | ------------- | --------- | ---------- |
-| postgres, redis, rabbitmq, epay-server | 50 MB         | 3–5       | 150–250 MB |
-| nginx                                  | 10 MB         | 5         | 50 MB      |
-| grafana, prometheus, loki, promtail    | 20 MB         | 3         | 60 MB      |
-| exporters                              | 10 MB         | 2         | 20 MB      |
+| Service group                       | Max file size | Max files | Max total  |
+| ----------------------------------- | ------------- | --------- | ---------- |
+| postgres, redis, epay-server        | 50 MB         | 3–5       | 150–250 MB |
+| nginx                               | 10 MB         | 5         | 50 MB      |
+| grafana, prometheus, loki, promtail | 20 MB         | 3         | 60 MB      |
+| exporters                           | 10 MB         | 2         | 20 MB      |
 
 ### Backend Docker Build
 
@@ -907,9 +896,6 @@ PostgreSQL
 
 Redis
   └─ redis-exporter :9121 ───────────► Prometheus ──► Grafana
-
-RabbitMQ
-  └─ :15692/metrics ─────────────────► Prometheus ──► Grafana
 ```
 
 ---
@@ -922,14 +908,13 @@ Prometheus scrapes all targets every 15 seconds and retains data for 15 days (`-
 
 #### Scrape Targets
 
-| Job name      | Target                     | Port  | Metrics path           | Interval | Notes                                     |
-| ------------- | -------------------------- | ----- | ---------------------- | -------- | ----------------------------------------- |
-| `epay-server` | epay-server-1/2/3          | 8029  | `/actuator/prometheus` | 15s      | JVM, HTTP, HikariCP, datasource spans     |
-| `nginx`       | nginx-exporter             | 9113  | `/metrics`             | 30s      | Nginx connections, requests, status codes |
-| `redis`       | redis-exporter             | 9121  | `/metrics`             | 30s      | Redis memory, ops/sec, evictions          |
-| `postgresql`  | postgres-exporter          | 9187  | `/metrics`             | 60s      | DB connections, table stats, WAL          |
-| `rabbitmq`    | rabbitmq (built-in plugin) | 15692 | `/metrics`             | 30s      | Queue depth, messages, consumers          |
-| `prometheus`  | localhost                  | 9090  | `/metrics`             | 15s      | Prometheus self-scrape                    |
+| Job name      | Target            | Port | Metrics path           | Interval | Notes                                     |
+| ------------- | ----------------- | ---- | ---------------------- | -------- | ----------------------------------------- |
+| `epay-server` | epay-server-1/2/3 | 8029 | `/actuator/prometheus` | 15s      | JVM, HTTP, HikariCP, datasource spans     |
+| `nginx`       | nginx-exporter    | 9113 | `/metrics`             | 30s      | Nginx connections, requests, status codes |
+| `redis`       | redis-exporter    | 9121 | `/metrics`             | 30s      | Redis memory, ops/sec, evictions          |
+| `postgresql`  | postgres-exporter | 9187 | `/metrics`             | 60s      | DB connections, table stats, WAL          |
+| `prometheus`  | localhost         | 9090 | `/metrics`             | 15s      | Prometheus self-scrape                    |
 
 The `epay-server` job uses `relabel_configs` to rewrite `__address__` into a clean `instance` label (`epay-server-1`, `epay-server-2`, `epay-server-3`) and extract an `instance_number` label. All targets carry static labels: `service`, `language`, `tier`, and `cluster: epay-prod`. The `application` tag is injected from `spring.application.name` by Micrometer so every metric carries `application="epay-server"`.
 
@@ -960,14 +945,12 @@ All rules belong to the group `epay-alerts` with a 30-second evaluation interval
 
 **Database, Cache, Messaging**
 
-| Alert                       | Expression                             | Fires After | Severity |
-| --------------------------- | -------------------------------------- | ----------- | -------- |
-| `PostgreSQLDown`            | `up{job="postgresql"} == 0`            | 1 min       | critical |
-| `PostgreSQLHighConnections` | `pg_stat_database_numbackends > 100`   | 5 min       | warning  |
-| `RedisDown`                 | `up{job="redis"} == 0`                 | 1 min       | critical |
-| `RedisHighMemory`           | Redis memory used `> 80%` of max       | 5 min       | warning  |
-| `RabbitMQDown`              | `up{job="rabbitmq"} == 0`              | 1 min       | critical |
-| `RabbitMQQueueHigh`         | `rabbitmq_queue_messages_ready > 1000` | 5 min       | warning  |
+| Alert                       | Expression                           | Fires After | Severity |
+| --------------------------- | ------------------------------------ | ----------- | -------- |
+| `PostgreSQLDown`            | `up{job="postgresql"} == 0`          | 1 min       | critical |
+| `PostgreSQLHighConnections` | `pg_stat_database_numbackends > 100` | 5 min       | warning  |
+| `RedisDown`                 | `up{job="redis"} == 0`               | 1 min       | critical |
+| `RedisHighMemory`           | Redis memory used `> 80%` of max     | 5 min       | warning  |
 
 **Infrastructure & Business**
 
@@ -1134,7 +1117,6 @@ Every HTTP request entering a backend instance starts a new **root span** (or co
 - Every incoming HTTP request (`http.server.requests`)
 - Every outgoing REST client call (`http.client.requests`)
 - Every SQL query executed against PostgreSQL (`datasource-micrometer-spring-boot` instruments the DataSource directly — no manual annotation needed)
-- Every RabbitMQ message produced or consumed
 
 These spans are collected in-process by `micrometer-tracing-bridge-brave`, then batched and shipped asynchronously over HTTP to `http://zipkin:9411/api/v2/spans` by `spring-boot-starter-zipkin` (which bundles `zipkin-reporter-brave`).
 
@@ -1190,7 +1172,6 @@ Each trace shows a **waterfall timeline** of spans:
 - The root span: the Nginx-to-backend HTTP request
 - Child spans for each SQL query (table name, query type, execution time)
 - Child spans for outgoing REST calls (Paystack, Flutterwave, IP geolocation API)
-- Child spans for RabbitMQ message dispatches (notification queue, maintenance queue)
 
 The **Dependencies** tab shows which services call which, with call counts and error rates.
 
@@ -1236,7 +1217,7 @@ zipkin:
 Promtail runs as a sidecar container with two read mounts and ships two categories of logs to Loki:
 
 **1. Docker container logs** (from `/var/lib/docker/containers`)  
-All services — postgres, redis, rabbitmq, nginx, spring boot, grafana — their stdout/stderr streams. Each log line is labelled with `container_name` so you can filter by service in Grafana.
+All services — postgres, redis, nginx, spring boot, grafana — their stdout/stderr streams. Each log line is labelled with `container_name` so you can filter by service in Grafana.
 
 **2. Application logs** (from the `epay_logs` shared volume at `/var/log/epay`)  
 The Spring Boot app writes structured log files here:
@@ -1817,10 +1798,6 @@ FLUTTERWAVE_SECRET_KEY=FLWSECK_live-xxxxxxxxxxxx
 GMAIL_USERNAME=your@gmail.com
 GMAIL_APP_PASSWORD=your_gmail_app_password
 
-# RabbitMQ
-SPRING_RABBITMQ_USERNAME=guest
-SPRING_RABBITMQ_PASSWORD=guest
-
 # Grafana
 GF_ADMIN_USER=admin
 GF_ADMIN_PASSWORD=your_grafana_password
@@ -1869,19 +1846,18 @@ docker compose up --build
 
 ### 5. Access the services
 
-| Service             | URL                      |
-| ------------------- | ------------------------ |
-| Frontend            | http://localhost         |
-| API (via Nginx)     | http://localhost/api/v1/ |
-| Swagger UI          | http://localhost/docs    |
-| Kafka Management | http://localhost:8090   |
-| Prometheus          | http://localhost:9090    |
-| Grafana             | http://localhost:3010    |
-| Zipkin              | http://localhost:9411    |
-| Loki                | http://localhost:3100    |
-| postgres-exporter   | http://localhost:9187    |
-| redis-exporter      | http://localhost:9121    |
-| nginx-exporter      | http://localhost:9113    |
+| Service           | URL                      |
+| ----------------- | ------------------------ |
+| Frontend          | http://localhost         |
+| API (via Nginx)   | http://localhost/api/v1/ |
+| Swagger UI        | http://localhost/docs    |
+| Prometheus        | http://localhost:9090    |
+| Grafana           | http://localhost:3010    |
+| Zipkin            | http://localhost:9411    |
+| Loki              | http://localhost:3100    |
+| postgres-exporter | http://localhost:9187    |
+| redis-exporter    | http://localhost:9121    |
+| nginx-exporter    | http://localhost:9113    |
 
 ### Local Development (without Docker)
 
@@ -1889,7 +1865,7 @@ docker compose up --build
 
 ```bash
 cd epay
-# Start postgres, redis, rabbitmq locally (or via docker compose up postgres redis rabbitmq)
+# Start postgres and redis locally (or via docker compose up postgres redis)
 mvn spring-boot:run -pl main
 ```
 
@@ -2035,16 +2011,16 @@ ePay has a multi-layer test strategy covering backend unit and integration tests
 
 ### Backend Testing
 
-| Tool              | Version                        | Purpose                                                             |
-| ----------------- | ------------------------------ | ------------------------------------------------------------------- |
-| JUnit 5 + Mockito | via `spring-boot-starter-test` | Unit tests — fast, in-process, no I/O                               |
-| Spring Boot Test  | via `spring-boot-starter-test` | `@SpringBootTest` slice tests with full context                     |
-| Testcontainers    | 1.20.4                         | Integration tests — real PostgreSQL and RabbitMQ containers         |
-| RestAssured       | 5.5.0                          | Fluent HTTP API assertions for controller-layer tests               |
-| WireMock          | 3.9.1                          | Stubs Paystack and Flutterwave HTTP calls in integration tests      |
-| Awaitility        | via Spring Boot BOM            | Async condition polling (e.g. wait for RabbitMQ message processing) |
-| JaCoCo            | 0.8.12                         | Code coverage — HTML + XML reports, 60% line coverage threshold     |
-| Spring REST Docs  | 3.0.1                          | Auto-generates API documentation snippets from MockMvc tests        |
+| Tool              | Version                        | Purpose                                                         |
+| ----------------- | ------------------------------ | --------------------------------------------------------------- |
+| JUnit 5 + Mockito | via `spring-boot-starter-test` | Unit tests — fast, in-process, no I/O                           |
+| Spring Boot Test  | via `spring-boot-starter-test` | `@SpringBootTest` slice tests with full context                 |
+| Testcontainers    | 1.20.4                         | Integration tests — real PostgreSQL containers in-process       |
+| RestAssured       | 5.5.0                          | Fluent HTTP API assertions for controller-layer tests           |
+| WireMock          | 3.9.1                          | Stubs Paystack and Flutterwave HTTP calls in integration tests  |
+| Awaitility        | via Spring Boot BOM            | Async condition polling in tests                                |
+| JaCoCo            | 0.8.12                         | Code coverage — HTML + XML reports, 60% line coverage threshold |
+| Spring REST Docs  | 3.0.1                          | Auto-generates API documentation snippets from MockMvc tests    |
 
 **Running tests:**
 
@@ -2075,7 +2051,7 @@ Coverage reports are generated at `target/site/jacoco/index.html` inside each mo
 
 **Testcontainers configuration:**
 
-Integration tests annotated with `@Testcontainers` spin up a real `postgres:16-alpine` container (mapped to a random port) and a `rabbitmq:3.13-management-alpine` container per test class. Spring Boot's `@DynamicPropertySource` wires the container URLs into the application context automatically. No pre-installed database is needed.
+Integration tests annotated with `@Testcontainers` spin up a real `postgres:16-alpine` container (mapped to a random port) per test class. Spring Boot's `@DynamicPropertySource` wires the container URLs into the application context automatically. No pre-installed database is needed.
 
 ---
 
@@ -2340,7 +2316,7 @@ Initialise
 | postgres-exporter | http://localhost:9187 | PostgreSQL → Prometheus                          |
 | redis-exporter    | http://localhost:9121 | Redis → Prometheus                               |
 | nginx-exporter    | http://localhost:9113 | Nginx stub_status → Prometheus                   |
-
+| kubernates        | http://localhost:8001 |  Kubernate →    ui                |
 ### Alertmanager
 
 Alertmanager receives all alerts defined in `epay/monitoring/prometheus/alert.rules.yml` and routes them by severity and service:
@@ -2399,7 +2375,7 @@ These metrics power container-level panels in Grafana and feed the `BackendHighC
 | Admin support ticket workflow                                      | Done        |
 | Liquidity management (Paystack + Flutterwave floats)               | Done        |
 | Developer portal with API keys and webhooks                        | Done        |
-| Async notifications via RabbitMQ                                   | Done        |
+| Async notifications via direct email (JavaMailSender + Thymeleaf)  | Done        |
 | Observability (Prometheus + Grafana + Zipkin)                      | Done        |
 | Savings plans                                                      | Done        |
 | Escrow                                                             | In Progress |
@@ -2470,7 +2446,7 @@ Two new port interfaces were added to `epay-common` to avoid circular module dep
 | Debt created (empty wallet) | `maintenance/maintenance-debt-created.html` | `ePay — Maintenance Fee Debt Created (currency)`                 |
 | Debt repaid via deposit     | `maintenance/maintenance-debt-repaid.html`  | `ePay — Maintenance Debt Fully Settled / Partial Debt Repayment` |
 
-Two new RabbitMQ queues wired end-to-end:
+Two new notification email templates wired end-to-end via direct dispatch:
 
 - `maintenance.wallet` → fee-deducted notification
 - `maintenance.debt` → debt-created and debt-repaid notifications (dispatched on `eventType` field)
@@ -2548,13 +2524,12 @@ upstream epay_admin { least_conn; /* weight=2 on server-1 */ }
 
 All broken scrape targets in `prometheus.yml` were corrected:
 
-| Target   | Before (broken)                          | After (correct)                               |
-| -------- | ---------------------------------------- | --------------------------------------------- |
-| Redis    | `redis:6379` (Redis protocol)            | `redis-exporter:9121` (HTTP metrics)          |
-| RabbitMQ | `rabbitmq:15672/metrics` (management UI) | `rabbitmq:15692` (built-in prometheus plugin) |
-| Nginx    | `nginx:80/nginx_status` (plain text)     | `nginx-exporter:9113` (Prometheus format)     |
-| Zipkin   | `zipkin:9411/metrics` (no endpoint)      | Removed                                       |
-| cAdvisor | Listed but missing service               | Kept with docker-compose snippet in comment   |
+| Target   | Before (broken)                      | After (correct)                             |
+| -------- | ------------------------------------ | ------------------------------------------- |
+| Redis    | `redis:6379` (Redis protocol)        | `redis-exporter:9121` (HTTP metrics)        |
+| Nginx    | `nginx:80/nginx_status` (plain text) | `nginx-exporter:9113` (Prometheus format)   |
+| Zipkin   | `zipkin:9411/metrics` (no endpoint)  | Removed                                     |
+| cAdvisor | Listed but missing service           | Kept with docker-compose snippet in comment |
 
 `stub_status` was already correctly configured in `06-server-https.conf` for the nginx exporter to scrape.
 
@@ -2600,6 +2575,125 @@ The in-memory `volatile boolean running` guard in `MaintenanceFeeScheduler` was 
 - TTL: 2 hours (auto-expires even if a node crashes without releasing)
 - Release: checks the lock still belongs to this instance before deleting (prevents a slow node from releasing a lock re-acquired by another)
 - Fail-open: if Redis is unreachable, the scheduler proceeds rather than silently skipping an entire billing cycle
+
+---
+
+### November 2026
+
+---
+
+#### Notification Architecture — Kafka Removed, Direct Dispatch
+
+The entire Kafka infrastructure was removed and replaced with direct in-process notification dispatch.
+
+**What changed:**
+
+Previously, every notification (login alert, OTP, statement email, wallet credit/debit, maintenance fee) went through a Kafka topic:
+
+```
+Publisher → KafkaTemplate.send() → Kafka broker → @KafkaListener → NotificationService → JavaMailSender
+```
+
+This caused `NoClassDefFoundError: Could not initialize class org.apache.kafka.clients.producer.ProducerConfig` on every request that triggered a notification, because `kafka-clients 4.2.1` (pulled in by Spring Boot 4.1.0's BOM) has a broken static initializer — it references `DefaultJwtRetriever` from a separate OAuth module that is not bundled in the base jar. The JVM could never initialize `ProducerConfig`, crashing the entire request thread.
+
+**The fix:** Both publishers now call the notification services directly. The Kafka hop was an in-process round-trip through a broker that isn't running in this environment — removing it eliminated the dependency entirely.
+
+```
+Publisher → NotificationService → JavaMailSender
+```
+
+**Files changed:**
+
+| File                                | Change                                                                            |
+| ----------------------------------- | --------------------------------------------------------------------------------- |
+| `AuthNotificationPublisher`         | Rewired to call `AuthenticationNotificationService` directly — no `KafkaTemplate` |
+| `WalletNotificationMessageProducer` | Rewired to call `WalletNotificationService` directly — no `KafkaTemplate`         |
+| `AuthNotificationListener`          | Emptied — `@KafkaListener` annotations removed                                    |
+| `WalletNotificationListener`        | Emptied — `@KafkaListener` annotations removed                                    |
+| `KafkaProducerConfig`               | Emptied — all beans and imports removed                                           |
+| `KafkaTopicConfig`                  | Rewritten as a plain constants class — no Spring/Kafka API imports                |
+| `pom.xml`                           | `spring-kafka` and `testcontainers:kafka` dependencies removed                    |
+| `application.yaml`                  | Entire `spring.kafka` block removed                                               |
+
+---
+
+#### JWT Refresh Token Flow — Full End-to-End Fix
+
+The access token refresh flow was broken at multiple layers. All issues were resolved.
+
+**Backend fixes:**
+
+- `JwtService.extractAllClaims()` threw `ExpiredJwtException` even when called on a valid refresh token during the refresh endpoint, because the JJWT parser rejects expired tokens at parse time regardless of intent. Added `extractClaimsIgnoreExpiry()` which catches `ExpiredJwtException` and returns its embedded claims (signature is still verified). Added `extractTokenTypeIgnoreExpiry`, `extractUsernameIgnoreExpiry`, `extractSessionIdIgnoreExpiry`, and `isRefreshTokenExpired` on top of it.
+- `AuthenticationService.refreshToken()` now uses these ignore-expiry methods so type/subject/session can always be read from the token before the explicit expiry check.
+- The session validity check in `refreshToken()` previously hard-rejected any request where the Redis session key had expired (5-minute TTL). Since the refresh token itself proves the session was valid, the session is now **restored** from the refresh token claims rather than causing a 401. `restoreSession(sessionId, userId)` was added to `UserTracerService` and `IUserTracerService`.
+- `generateRefreshToken()` in `JwtService` now produces a full-claims token identical in structure to the access token (roles, userId, permissions, kycLevel, accountStatus, session) but with `token.type = REFRESH` and a 7-day TTL. Previously it only carried session and type claims, so the refresh endpoint could not look up the user from it.
+- Login response now includes `refreshToken` alongside `jwt`.
+
+**Frontend fixes (`xhrClient.ts`):**
+
+- Added `isJwtExpired()` — decodes the JWT `exp` claim client-side. Before every non-auth request, if the stored access token is within 10 seconds of expiry, the refresh is triggered **proactively** so the original request never goes out with an expired token.
+- Extracted `attemptRefreshThen()` to handle both the proactive and reactive (post-401) refresh paths without duplicating queue logic.
+- `doRefresh()` now reads `res.jwt` directly from the backend response (the backend returns it at the top level, not under `res.data`).
+- `isLoggingOut` guard prevents duplicate logout navigations when multiple requests all 401 at the same time.
+- `AUTH_PATHS` check now uses exact match for `"/"` and `startsWith` for all others, so dashboard/wallet/etc. paths are no longer falsely treated as auth pages (the previous bug caused the 401 refresh branch to never fire).
+
+---
+
+#### Redis Session — 5-Minute Sliding Window
+
+The Redis session TTL was changed from 12 hours to 5 minutes. Each token refresh or authenticated request renews the TTL, so active users never get logged out. Only an explicit logout (which deletes the Redis keys) ends the session.
+
+- `UserTracerService.createSession()` no longer writes to the `user_tracer` DB table — session data is Redis-only.
+- `deleteByUserId()` no longer queries the DB — Redis-only delete.
+- `renewSession()` extends both `session:active:{userId}` and `session:id:{sessionId}` TTLs on each refresh.
+- `restoreSession()` re-creates both keys from the refresh token claims when they have naturally expired between requests.
+- `SecurityExpressionMethods.hasValidSession()` re-seeds the session from JWT claims if the Redis key is missing but the JWT is valid — prevents 403 on `@PreAuthorize` endpoints after the TTL expires between requests.
+
+---
+
+#### Wallet Balance — 2 Decimal Places
+
+`WalletService.toBalanceDTO()` previously used `BigDecimal.toPlainString()`, outputting `998000.00000000` (8 decimal places from the DB column). Changed to `.setScale(2, RoundingMode.HALF_UP).toPlainString()` so the API returns `998000.00`. The DB column retains `scale = 8` for internal arithmetic precision.
+
+---
+
+#### Dashboard Services Grid — Mobile Fix
+
+The `feature-grid` at screen widths below 700px was switching from `display: grid` to `display: flex` with horizontal scroll and dot navigation. This made the services section look broken at 673px. Fixed by:
+
+- Replacing the `≤700px` flex/scroll CSS block with a plain 5-column grid at all widths.
+- Removing the scroll/dot state (`sliderRef`, `activeDot`, `handleSliderScroll`, `scrollToPage`) from `dashboard/page.tsx`.
+- Hiding `.service-dots` below 700px via CSS since there is nothing to paginate.
+
+---
+
+#### RightPanel Added to More Pages
+
+`RightPanel` was missing from several pages that needed it:
+
+- `/wallet/deposit-banks` — added `RightPanel`, removed `no-right-panel` class from the container.
+- `/investments` — added `RightPanel`.
+- All `/services/bills/*` pages (airtime, data, cabletv, electricity, betting, shopping) — added `RightPanel`.
+
+---
+
+#### MobileNav — Custom Icons
+
+Replaced Lucide React icons in `MobileNav.tsx` with the project's own SVG icons from `app/utils/Icons.tsx`:
+
+| Tab           | Before            | After          |
+| ------------- | ----------------- | -------------- |
+| Home          | `lucide: Home`    | `HomeIcon`     |
+| Bills         | `lucide: Receipt` | `BillNavIcon`  |
+| Centre button | `lucide: Plus`    | `PlusIcon`     |
+| Swap          | `lucide: Repeat`  | `ExchangeIcon` |
+| Profile       | `lucide: User`    | `UserIcon`     |
+
+---
+
+#### Kafka PDF/Statement Fix (before Kafka was removed)
+
+`POST /receipt/generate-pdf/{userId}` was returning 500 on every call. Root cause: `kafka-clients 4.2.1` static initializer failure (see Kafka removal above). An intermediate fix added `auto-startup: false` to the Kafka listener factory to prevent the app from crashing at startup, and wrapped `KafkaTemplate.send()` in try/catch in `AuthNotificationPublisher`. The final fix was removing Kafka entirely.
 
 Copyright (c) 2026 Willstone Strategic Industries Limited
 

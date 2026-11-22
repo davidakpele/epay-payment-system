@@ -12,6 +12,8 @@ pipeline {
         DEPLOY_PATH    = '/opt/epay-app'
         NODE_VERSION   = '24.11.1'
         MAVEN_OPTS     = '-Xmx1024m -XX:MaxMetaspaceSize=512m'
+        DOCKER_BUILDKIT = '1'
+        COMPOSE_DOCKER_CLI_BUILD = '1'
     }
 
     options {
