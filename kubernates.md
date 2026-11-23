@@ -5,6 +5,7 @@
 ```
 winget install Kubernetes.kind   # kind v0.33.0
 winget install Kubernetes.kubectl # kubectl v1.37.2
+winget install Helm.Helm          # required by k8s/deploy.ps1 for Headlamp
 ```
 
 ---
@@ -119,6 +120,36 @@ This applies all files in order (00 → 11):
 kubectl apply -f k8s/monitoring/
 ```
 
+The Grafana overview and request-audit dashboards are provisioned from the
+Grafana image, outside the persistent data volume. Promtail reads the backend
+logs from the shared `epay-logs` volume and forwards them to Loki. PostgreSQL
+metrics are collected by `postgres-exporter`.
+
+The deployment script installs Headlamp into `kube-system`. Its service
+account gets the built-in read-only `view` role plus read-only access to nodes
+and storage classes/volumes for the Overview page. Read-only permissions for
+the listed Gateway API and LeaderWorkerSet resources are also applied.
+
+Those Gateway API and LeaderWorkerSet pages will only return resources after
+their CRDs and controllers are installed; they are not included in this ePay
+deployment.
+
+### Access Headlamp
+
+Start the port-forward in a terminal:
+
+```powershell
+kubectl -n kube-system port-forward svc/headlamp 8001:80
+```
+
+Open [http://localhost:8001](http://localhost:8001). If prompted to sign in,
+create a short-lived token for Headlamp's read-only service account and use it
+in the login form:
+
+```powershell
+kubectl create token headlamp -n kube-system
+```
+
 ---
 
 ## Watch Startup Progress
@@ -170,6 +201,7 @@ Once all pods are `Running`:
 | Grafana         | http://localhost:3010 — admin / admin |
 | Prometheus      | http://localhost:9090                 |
 | Alertmanager    | http://localhost:9093                 |
+| Headlamp        | http://localhost:8001 — start the port-forward above |
 
 ---
 
@@ -197,6 +229,15 @@ kubectl rollout restart deployment/epay-server -n epay
 ```
 
 ---
+```Build app
+.\k8s\deploy.ps1
+```
+```Activate Kubt
+kubectl -n kube-system port-forward svc/headlamp 8001:80
+```
+```To Generate auth token
+kubectl create token headlamp -n kube-system
+```
 
 ## Useful Commands
 
@@ -208,28 +249,8 @@ kubectl -n epay get pods kafka-0 -w
 kubectl -n epay logs kafka-0 --previous --tail=40  
 kubectl -n epay exec kafka-0 -- kafka-topics --bootstrap-server localhost:9092 --list
 kubectl -n epay delete pod kafka-0  
-kubectl get events -n headlamp
-kubectl get pods -n headlamp
-kubectl create token headlamp -n headlamp
-kubectl port-forward -n headlamp svc/headlamp 8001:80
-kubectl -n kube-system port-forward svc/headlamp 8001:80
-kubectl get events -n headlamp --sort-by=.lastTimestamp
-kubectl get pods -n headlamp -w
-kubectl logs headlamp-86c49cb4f4-f69hg -n headlamp
-kubectl describe pod headlamp-86c49cb4f4-f69hg -n headlamp
-kubectl get svc -n headlamp
-kubectl create clusterrolebinding headlamp-admin --serviceaccount=kube-system:headlamp --clusterrole=cluster-admin
-kubectl delete clusterrolebinding headlamp-admin
-kubectl create namespace headlamp
-helm repo update
-helm repo add headlamp https://kubernetes-sigs.github.io/headlamp/
-kubectl get svc -A | findstr headlamp
-kubectl get pods -A | findstr headlamp
 kubectl get namespaces
-helm version
-winget install Helm.Helm
-winget install Headlamp.Headlamp
-helm install headlamp headlamp/headlamp --namespace headlamp
+
 kubectl -n epay logs deploy/epay-server --tail=20
 kubectl -n epay get pods kafka-0 -w
 kubectl -n epay get pod kafka-0 -o jsonpath="{.spec.containers[0].livenessProbe}"
@@ -286,6 +307,8 @@ kubectl rollout restart deployment/frontend -n epay
 
 ```
 k8s/
+├── deploy.ps1               # builds and deploys the app, monitoring, and Headlamp
+├── headlamp-rbac.yaml       # read-only Headlamp access to cluster resources
 ├── kind-config.yaml          # kind cluster definition with port mappings
 ├── base/
 │   ├── 00-namespace.yaml
